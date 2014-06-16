@@ -2,6 +2,7 @@
 set -e
 
 export ROSE_SH_HOME="$(cd "$(dirname "$0")" && pwd)"
+export PATH="${ROSE_SH_HOME}/opt:${PATH}"
 
 #-------------------------------------------------------------------------------
 # Set defaults
@@ -335,7 +336,7 @@ if [ -d "${DEPENDENCIES_DIR__CUSTOM}" ]; then
     export DEPENDENCIES_LIST__CUSTOM="$(ls ${DEPENDENCIES_DIR__CUSTOM}/*.sh)"
 fi
 
-: ${ROSE_SH_DEPS_PREFIX:="${DEPENDENCIES_DIR__DEFAULT}/installation"}
+: ${ROSE_SH_DEPS_PREFIX:="${DEPENDENCIES_DIR__DEFAULT}/installation/${application}"}
 export ROSE_SH_DEPS_LIBDIR="${ROSE_SH_DEPS_PREFIX}/lib"
 
 : ${LDFLAGS:=-L"${ROSE_SH_DEPS_PREFIX}/lib" -L"${ROSE_SH_DEPS_PREFIX}/lib64" -Wl,-z,relro -Wl,-R"${ROSE_SH_DEPS_PREFIX}/lib" -Wl,-R"${ROSE_SH_DEPS_PREFIX}"/lib "-L${LIBTOOL_HOME}/lib"}
@@ -344,7 +345,6 @@ export ROSE_SH_DEPS_LIBDIR="${ROSE_SH_DEPS_PREFIX}/lib"
 : ${ACLOCAL_PATH:="${ROSE_SH_DEPS_PREFIX}/share/aclocal:/usr/share/aclocal"}
 export PKG_CONFIG_PATH="${ROSE_SH_DEPS_PREFIX}/lib:${ROSE_SH_DEPS_PREFIX}/lib/pkgconfig:${ROSE_SH_DEPS_PREFIX}/lib64:${ROSE_SH_DEPS_PREFIX}/lib64/pkgconfig:${ROSE_SH_DEPS_PREFIX}/share/pkgconfig:${PKG_CONFIG_PATH}"
 export PATH="${ROSE_SH_DEPS_PREFIX}/bin:${ROSE_SH_DEPS_PREFIX}/sbin:${PATH}"
-export PATH="${ROSE_SH_HOME}/opt:${PATH}"
 export LD_LIBRARY_PATH="${ROSE_SH_DEPS_PREFIX}/lib:${ROSE_SH_DEPS_PREFIX}/lib64:${LD_LIBRARY_PATH}"
 
 # TOO1 (1/30/2014) Required for proper use of ROSE_SH/dependencies/installation/bin/ant,
