@@ -31,8 +31,8 @@ export APPLICATIONS_LIST="$(ls ${APPLICATIONS_DIR}/ | xargs -I{} basename {} | s
   rose-dev@rosecompiler1.llnl.gov:rose/c
   }
 : ${TARBALL_MIRROR_URLS:=
-  https://bitbucket.org/rose-compiler/rose-sh/downloads
   http://hudson-rose-30:8080/userContent/tarballs/dependencies
+  https://bitbucket.org/rose-compiler/rose-sh/downloads
   https://rosecompiler1.llnl.gov:8443/jenkins-edg4x/userContent/tarballs/dependencies
   http://portal.nersc.gov/project/dtec/tarballs/dependencies
   }
