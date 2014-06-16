@@ -375,7 +375,7 @@ for dependency in $DEPENDENCIES_LIST__DEFAULT; do
 done
 
 #-------------------------------------------------------------------------------
-# Source custom dependencies (overrides default)
+# Source custom dependencies (overrides defaults)
 #-------------------------------------------------------------------------------
 if [ -n "${DEPENDENCIES_LIST__CUSTOM}" ]; then
     for dependency in $DEPENDENCIES_LIST__CUSTOM; do
