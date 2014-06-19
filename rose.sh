@@ -199,6 +199,8 @@ phase_1()
 {
   info "Performing Phase 1"
 
+  export application_abs_srcdir="${application_workspace}/phase_1/${application}-src"
+
   mkdir -p "${application_workspace}/phase_1" || fail "phase_1::create_workspace failed"
   pushd "${application_workspace}/phase_1"    || fail "phase_1::cd_into_workspace failed"
       "install_deps_${application}"           || fail "phase_1::install_deps failed with status='$?'"

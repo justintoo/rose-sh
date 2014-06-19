@@ -1,12 +1,12 @@
 #!/bin/bash
 
-: ${APPLICATION_SRCDIR:="$(pwd)"}
-: ${KG__STRIP_PATH:="${APPLICATION_SRCDIR}/"}
-: ${KG__EXPECTED_FAILURES_FILE:="${APPLICATION_SRCDIR}/rose-expected_failures.txt"}
-: ${KG__EXPECTED_PASSES_FILE:="${APPLICATION_SRCDIR}/rose-expected_passes.txt"}
-: ${KG__REPORT_FAIL:="${APPLICATION_SRCDIR}/rose-failures.txt"}
-: ${KG__REPORT_PASS:="${APPLICATION_SRCDIR}/rose-passes.txt"}
-: ${KG__ROSE_FLAGS:=--verbose}
+: ${KG__STRIP_PATH:="${application_abs_srcdir}/"}
+: ${KG__EXPECTED_FAILURES_FILE:="${application_abs_srcdir}/rose-expected_failures.txt"}
+: ${KG__EXPECTED_PASSES_FILE:="${application_abs_srcdir}/rose-expected_passes.txt"}
+: ${KG__REPORT_FAIL:="${application_abs_srcdir}/rose-failures.txt"}
+: ${KG__REPORT_PASS:="${application_abs_srcdir}/rose-passes.txt"}
+: ${KG__ROSE_FLAGS:=}
+#: ${KG__ROSE_FLAGS:=--verbose}
 
 if test -n "${KG__STRIP_PATH}"; then
   KG__ROSE_FLAGS="${KG__ROSE_FLAGS} --strip-path-prefix=${KG__STRIP_PATH}"
