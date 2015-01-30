@@ -13,8 +13,10 @@ download_xen()
   set -x
       #clone_repository "${application}" "${application}-src" || exit 1
       #cd "${application}-src/" || exit 1
-      wget --no-check-certificate http://www.xenproject.org/downloads/xen-archives/xen-44-series/xen-440/299-xen-project-440/file.html || exit 1
-      tar xzvf file.html || exit 1
+      if [ ! -d "xen-4.4.0/" ]; then
+          wget --no-check-certificate http://www.xenproject.org/downloads/xen-archives/xen-44-series/xen-440/299-xen-project-440/file.html || exit 1
+          tar xzvf file.html || exit 1
+      fi
       cd xen-4.4.0/ || exit 1
   set +x
 }
@@ -42,6 +44,28 @@ configure_xen__rose()
   #-----------------------------------------------------------------------------
   set -x
   #-----------------------------------------------------------------------------
+
+          perl \
+            -pi.bak \
+            -e 's/HOSTCC      = gcc/HOSTCC = '$(basename "${ROSE_CC}")'\nCC = '$(basename "${ROSE_CC}")'/' \
+            Config.mk || exit 1
+
+          perl \
+            -pi.bak \
+            -e 's/gcc$/'$(basename "${ROSE_CC}")'/' \
+            config/StdGNU.mk || exit 1
+
+          perl \
+            -pi.bak \
+            -e 's/AC_PROG_CC/AC_PROG_CC(['$(basename "${ROSE_CC}")'])/' \
+            tools/configure.ac || exit 1
+
+
+          perl \
+            -pi.bak \
+            -e 's/AC_PROG_CC/AC_PROG_CC(['$(basename "${ROSE_CC}")'])/' \
+            tools/xm-test/configure.ac || exit 1
+
           PREPEND_INCLUDES="${ROSE_SH_DEPS_PREFIX}/include" \
           PREPEND_LIB="${ROSE_SH_DEPS_PREFIX}/lib" \
           CC="${ROSE_CC}" \
