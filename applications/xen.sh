@@ -66,6 +66,14 @@ configure_xen__rose()
             -e 's/AC_PROG_CC/AC_PROG_CC(['$(basename "${ROSE_CC}")'])/' \
             tools/xm-test/configure.ac || exit 1
 
+          # Replace -Werror with -Wall; not trivial to just remove the option altogether
+          for file in $(grep -rn "\-Werror" * | awk 'BEGIN { FS=":" } { print $1 }'); do
+              perl \
+                -pi.bak \
+                -e 's/-Werror/-Wall/' \
+                "${file}" || exit 1
+          done
+
           PREPEND_INCLUDES="${ROSE_SH_DEPS_PREFIX}/include" \
           PREPEND_LIB="${ROSE_SH_DEPS_PREFIX}/lib" \
           CC="${ROSE_CC}" \
