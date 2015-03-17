@@ -1,0 +1,1 @@
+rzzeus287@too1:python setup.py install --prefix="$(pwd)/installation" 

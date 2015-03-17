@@ -11,12 +11,12 @@
 if test -n "${KG__STRIP_PATH}"; then
   KG__ROSE_FLAGS="${KG__ROSE_FLAGS} --strip-path-prefix=${KG__STRIP_PATH}"
 fi
-#if test -n "${KG__EXPECTED_FAILURES_FILE}"; then
-#  KG__ROSE_FLAGS="${KG__ROSE_FLAGS} --expected-failures=${KG__EXPECTED_FAILURES_FILE}"
-#fi
-#if test -n "${KG__EXPECTED_PASSES_FILE}"; then
-#  KG__ROSE_FLAGS="${KG__ROSE_FLAGS} --expected-passes=${KG__EXPECTED_PASSES_FILE}"
-#fi
+if test -n "${KG__EXPECTED_FAILURES_FILE}"; then
+  KG__ROSE_FLAGS="${KG__ROSE_FLAGS} --expected-failures=${KG__EXPECTED_FAILURES_FILE}"
+fi
+if test -n "${KG__EXPECTED_PASSES_FILE}"; then
+  KG__ROSE_FLAGS="${KG__ROSE_FLAGS} --expected-passes=${KG__EXPECTED_PASSES_FILE}"
+fi
 if test -n "${KG__REPORT_FAIL}"; then
   KG__ROSE_FLAGS="${KG__ROSE_FLAGS} --report-fail=${KG__REPORT_FAIL}"
 fi
