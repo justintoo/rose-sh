@@ -29,6 +29,7 @@ export APPLICATIONS_LIST="$(ls ${APPLICATIONS_DIR}/ | xargs -I{} basename {} | s
 : ${REPOSITORY_MIRROR_URLS:=
   https://bitbucket.org/rose-compiler
   rose-dev@rosecompiler1.llnl.gov:rose/c
+  rose-dev@rosecompiler1.llnl.gov:rose/cxx
   }
 : ${TARBALL_MIRROR_URLS:=
   http://hudson-rose-30:8080/userContent/tarballs/dependencies
