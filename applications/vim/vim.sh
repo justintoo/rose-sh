@@ -62,7 +62,6 @@ configure_vim__rose()
   #-----------------------------------------------------------------------------
   set -x
   #-----------------------------------------------------------------------------
-      CC="${ROSE_CC}" \
       CPPFLAGS="$CPPFLAGS" \
       CFLAGS="$CFLAGS"  \
       LDFLAGS="$LDFLAGS"  \
@@ -104,7 +103,7 @@ compile_vim()
   #-----------------------------------------------------------------------------
   set -x
   #-----------------------------------------------------------------------------
-      make -j${parallelism}         || fail "An error occurred during application compilation"
+      make CC="${ROSE_CC}" -j${parallelism}         || fail "An error occurred during application compilation"
       make -j${parallelism} install || fail "An error occurred during application installation"
   #-----------------------------------------------------------------------------
   set +x
