@@ -41,10 +41,10 @@ configure_protobuf__rose()
       CFLAGS="$CFLAGS"  \
       LDFLAGS="$LDFLAGS"  \
           ./configure \
-              CC="${ROSE_CC}" \
-              CXX="${ROSE_CXX}" \
               --prefix="$(pwd)/install_tree" \
               ${PROTOBUF_CONFIGURE_OPTIONS} || fail "An error occurred during application configuration"
+              #CC="${ROSE_CC}"
+              #CXX="${ROSE_CXX}"
   #-----------------------------------------------------------------------------
   set +x
   #-----------------------------------------------------------------------------
@@ -83,13 +83,13 @@ compile_protobuf()
       # Fails to compile correctly with -fPIC, so libprotobuf.so.8 is empty
       # and therefore, linking fails
       make CXX=g++ descriptor.lo -C src/
-      if [ $? - ne 0 ]; then
+      if [ $? -ne 0 ]; then
         fail "GCC compilation failed"
       fi
 
       # Skip unit tests due to `protoc` segmentation fault
-      make protoc_outputs= -j${parallelism} || exit 1
-      if [ $? - ne 0 ]; then
+      make CC="${ROSE_CC}" CXX="${ROSE_CXX}" protoc_outputs= -j${parallelism}
+      if [ $? -ne 0 ]; then
         fail "An error occurred during application compilation"
       fi
   #-----------------------------------------------------------------------------
