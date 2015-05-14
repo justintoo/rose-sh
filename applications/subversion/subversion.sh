@@ -56,7 +56,6 @@ configure_subversion__rose()
   #-----------------------------------------------------------------------------
   set -x
   #-----------------------------------------------------------------------------
-      CC="${ROSE_CC}" \
       CPPFLAGS="$CPPFLAGS" \
       CFLAGS="$CFLAGS"  \
       LDFLAGS="$LDFLAGS"  \
@@ -98,7 +97,7 @@ compile_subversion()
   #-----------------------------------------------------------------------------
   set -x
   #-----------------------------------------------------------------------------
-      make -j${parallelism}         || fail "An error occurred during application compilation"
+      make CC="${ROSE_CC}" -j${parallelism}         || fail "An error occurred during application compilation"     
 # TODO:
 #      make -j${parallelism} install || fail "An error occurred during application installation"
   #-----------------------------------------------------------------------------
