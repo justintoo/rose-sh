@@ -12,7 +12,7 @@
     --with-zlib
   }
 : ${NEON_TARBALL:="neon-0.30.0.tar.gz"}
-: ${NEON_INSTALLED_FILE:="${ROSE_SH_DEPS_PREFIX}/include/neon.h"}
+: ${NEON_INSTALLED_FILE:="${ROSE_SH_DEPS_PREFIX}/include/neon/ne_utils.h"}
 
 #-------------------------------------------------------------------------------
 install_neon()
