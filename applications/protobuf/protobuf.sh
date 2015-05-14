@@ -1,34 +1,9 @@
-: ${VIM_DEPENDENCIES:=gettext ncurses}
-: ${VIM_CONFIGURE_OPTIONS:=
-  --with-vim-name=vim
-  --without-x
-  --with-compiledby="ROSE"
-  --disable-darwin
-  --disable-selinux
-  --disable-xsmp
-  --disable-xsmp-interact
-  --enable-luainterp=no
-  --disable-mzschemeinterp
-  --enable-perlinterp=no
-  --enable-pythoninterp=no
-  --enable-python3interp=no
-  --disable-tclinterp
-  --enable-rubyinterp=no
-  --disable-cscope
-  --disable-workshop
-  --disable-netbeans
-  --disable-sniff
-  --disable-hangulinput
-  --disable-xim
-  --disable-fontset
-  --enable-gui=no
-  --disable-acl
-  --disable-gpm
-  --disable-sysmouse
+: ${PROTOBUF_DEPENDENCIES:=}
+: ${PROTOBUF_CONFIGURE_OPTIONS:=
   }
 
 #-------------------------------------------------------------------------------
-download_vim()
+download_protobuf()
 #-------------------------------------------------------------------------------
 {
   info "Downloading source code"
@@ -40,21 +15,21 @@ download_vim()
 }
 
 #-------------------------------------------------------------------------------
-install_deps_vim()
+install_deps_protobuf()
 #-------------------------------------------------------------------------------
 {
-  install_deps ${VIM_DEPENDENCIES} || fail "Could not install dependencies"
+  install_deps ${PROTOBUF_DEPENDENCIES} || fail "Could not install dependencies"
 }
 
 #-------------------------------------------------------------------------------
-patch_vim()
+patch_protobuf()
 #-------------------------------------------------------------------------------
 {
   info "Patching not required"
 }
 
 #-------------------------------------------------------------------------------
-configure_vim__rose()
+configure_protobuf__rose()
 #-------------------------------------------------------------------------------
 {
   info "Configuring application for ROSE compiler='${ROSE_CC}'"
@@ -67,14 +42,16 @@ configure_vim__rose()
       LDFLAGS="$LDFLAGS"  \
           ./configure \
               --prefix="$(pwd)/install_tree" \
-              ${VIM_CONFIGURE_OPTIONS} || fail "An error occurred during application configuration"
+              ${PROTOBUF_CONFIGURE_OPTIONS} || fail "An error occurred during application configuration"
+              #CC="${ROSE_CC}"
+              #CXX="${ROSE_CXX}"
   #-----------------------------------------------------------------------------
   set +x
   #-----------------------------------------------------------------------------
 }
 
 #-------------------------------------------------------------------------------
-configure_vim__gcc()
+configure_protobuf__gcc()
 #-------------------------------------------------------------------------------
 {
   info "Configuring application for default compiler='${CC}'"
@@ -88,14 +65,14 @@ configure_vim__gcc()
       LDFLAGS="$LDFLAGS"  \
           ./configure \
               --prefix="$(pwd)/install_tree" \
-              ${VIM_CONFIGURE_OPTIONS} || fail "An error occurred during application configuration"
+              ${PROTOBUF_CONFIGURE_OPTIONS} || fail "An error occurred during application configuration"
   #-----------------------------------------------------------------------------
   set +x
   #-----------------------------------------------------------------------------
 }
 
 #-------------------------------------------------------------------------------
-compile_vim()
+compile_protobuf()
 #-------------------------------------------------------------------------------
 {
   info "Compiling application"
@@ -103,9 +80,20 @@ compile_vim()
   #-----------------------------------------------------------------------------
   set -x
   #-----------------------------------------------------------------------------
-      make CC="${ROSE_CC}" -j${parallelism}         || fail "An error occurred during application compilation"
-      make -j${parallelism} install || fail "An error occurred during application installation"
+      # Fails to compile correctly with -fPIC, so libprotobuf.so.8 is empty
+      # and therefore, linking fails
+      make CXX=g++ descriptor.lo -C src/
+      if [ $? -ne 0 ]; then
+        fail "GCC compilation failed"
+      fi
+
+      # Skip unit tests due to `protoc` segmentation fault
+      make CC="${ROSE_CC}" CXX="${ROSE_CXX}" protoc_outputs= -j${parallelism}
+      if [ $? -ne 0 ]; then
+        fail "An error occurred during application compilation"
+      fi
   #-----------------------------------------------------------------------------
   set +x
   #-----------------------------------------------------------------------------
 }
+
