@@ -2,7 +2,6 @@
 : ${FLEX_CONFIGURE_OPTIONS:=
     --prefix="${ROSE_SH_DEPS_PREFIX}"
     --exec-prefix="${ROSE_SH_DEPS_PREFIX}"
-    --libdir="${ROSE_SH_DEPS_PREFIX}/lib"
   }
 : ${FLEX_TARBALL:="flex-2.5.4a.tar.gz"}
 : ${FLEX_INSTALLED_FILE:="${ROSE_SH_DEPS_PREFIX}/include/FlexLexer.h"}
@@ -34,7 +33,7 @@ install_flex()
 
       download_tarball "${FLEX_TARBALL}"        || fail "Unable to download application tarball"
       tar xzvf "${FLEX_TARBALL}"                || fail "Unable to unpack application tarball"
-      cd "$(basename ${FLEX_TARBALL%.tar.gz})"  || fail "Unable to change into application source directory"
+      cd "$(basename ${FLEX_TARBALL%a.tar.gz})"  || fail "Unable to change into application source directory"
 
       ./configure ${FLEX_CONFIGURE_OPTIONS}     || fail "Unable to configure application"
 
