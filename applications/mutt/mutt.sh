@@ -42,10 +42,10 @@ configure_mutt__rose()
   set -x
   #-----------------------------------------------------------------------------
       export CC="${ROSE_CC}"
-
-      ./configure \
-          "${MUTT_CONFIGURE_OPTIONS[@]}" \
-          || exit 1
+      LDFLAGS="-L${ROSE_SH_DEPS_PREFIX}/lib ${LDFLAGS}" \
+        ./configure \
+            "${MUTT_CONFIGURE_OPTIONS[@]}" \
+            || exit 1
 
   #-----------------------------------------------------------------------------
   set +x
