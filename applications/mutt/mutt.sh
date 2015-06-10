@@ -2,7 +2,8 @@
 
 # Array required for proper variable expansion. Specifically, to
 # maintain quotations.
-MUTT_DEFAULT_CONFIGURE_OPTIONS=()
+MUTT_DEFAULT_CONFIGURE_OPTIONS=(
+    --with-curses=\"${ROSE_SH_DEPS_PREFIX}\")
 : ${MUTT_CONFIGURE_OPTIONS:=${MUTT_DEFAULT_CONFIGURE_OPTIONS[@]}}
 
 #-------------------------------------------------------------------------------
