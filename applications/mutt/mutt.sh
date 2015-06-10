@@ -41,7 +41,6 @@ configure_mutt__rose()
   #-----------------------------------------------------------------------------
   set -x
   #-----------------------------------------------------------------------------
-      export CC="${ROSE_CC}"
       LDFLAGS="-L${ROSE_SH_DEPS_PREFIX}/lib ${LDFLAGS}" \
         ./configure \
             "${MUTT_CONFIGURE_OPTIONS[@]}" \
@@ -78,7 +77,7 @@ compile_mutt()
   info "Compiling application"
 
   set -x
-      make -j${parallelism} || exit 1
+      make CC="${ROSE_CC}" -j${parallelism} || exit 1
   set +x
 }
 
