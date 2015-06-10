@@ -1,4 +1,4 @@
-: ${IRSSI_DEPENDENCIES:=zlib openssl}
+: ${IRSSI_DEPENDENCIES:=glib}
 
 #-------------------------------------------------------------------------------
 download_irssi()
