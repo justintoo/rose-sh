@@ -1,4 +1,4 @@
-: ${MUTT_DEPENDENCIES:=}
+: ${MUTT_DEPENDENCIES:=ncurses}
 
 # Array required for proper variable expansion. Specifically, to
 # maintain quotations.
