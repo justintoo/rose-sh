@@ -2,7 +2,9 @@
 
 # Array required for proper variable expansion. Specifically, to
 # maintain quotations.
-GZIP_DEFAULT_CONFIGURE_OPTIONS=()
+GZIP_DEFAULT_CONFIGURE_OPTIONS=(
+  --disable-gcc-warnings
+)
 : ${GZIP_CONFIGURE_OPTIONS:=${GZIP_DEFAULT_CONFIGURE_OPTIONS[@]}}
 
 #-------------------------------------------------------------------------------
