@@ -1,4 +1,4 @@
-: ${HELLO_DEPENDENCIES:=}
+: ${HELLO_DEPENDENCIES:=help2man}
 
 # Array required for proper variable expansion. Specifically, to
 # maintain quotations.
