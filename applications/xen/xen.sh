@@ -1,4 +1,4 @@
-: ${XEN_DEPENDENCIES:=dev86 iasl libuuid libaio yajl}
+: ${XEN_DEPENDENCIES:=dev86 iasl libuuid libaio yajl pixman}
 : ${XEN_CONFIGURE_OPTIONS:=
     --enable-githttp
     --disable-stubdom
