@@ -9,6 +9,8 @@ download_wget()
   set -x
       clone_repository "${application}" "${application}-src" || exit 1
       cd "${application}-src/" || exit 1
+      # TOO1 (07/10/2015): Use older version since 1.16.3 does not pass
+      git checkout v1.14 || exit 1
   set +x
 }
 
