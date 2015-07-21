@@ -4,7 +4,7 @@
     --libdir="${ROSE_SH_DEPS_LIBDIR}"
   }
 : ${PIXMAN_TARBALL:="pixman_0.32.6.orig.tar.gz"}
-: ${PIXMAN_INSTALLED_FILE:="${ROSE_SH_DEPS_PREFIX}/include/pixman.h"}
+: ${PIXMAN_INSTALLED_FILE:="${ROSE_SH_DEPS_PREFIX}/include/pixman-1/pixman.h"}
 
 #-------------------------------------------------------------------------------
 install_pixman()
