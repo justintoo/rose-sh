@@ -3,6 +3,9 @@ set -e
 
 export ROSE_SH_HOME="$(cd "$(dirname "$0")" && pwd)"
 export PATH="${ROSE_SH_HOME}/opt:${PATH}"
+export PYTHONPATH="${ROSE_SH_HOME}/opt/filelock-0.2.0/installation/lib/python2.7/site-packages:${PYTHONPATH}"
+
+source /nfs/casc/overture/ROSE/opt/rhel6/x86_64/sqlite/308002/gcc/4.4.5/setup.sh || true
 
 #-------------------------------------------------------------------------------
 # Set defaults
@@ -32,7 +35,7 @@ export APPLICATIONS_LIST="$(ls ${APPLICATIONS_DIR}/ | xargs -I{} basename {} | s
   rose-dev@rosecompiler1.llnl.gov:rose/cxx
   }
 : ${TARBALL_MIRROR_URLS:=
-  http://hudson-rose-30:8080/userContent/tarballs/dependencies
+  http://hudson-rose-30.llnl.gov:8080/userContent/tarballs/dependencies
   https://bitbucket.org/rose-compiler/rose-sh/downloads
   https://rosecompiler1.llnl.gov:8443/jenkins-edg4x/userContent/tarballs/dependencies
   http://portal.nersc.gov/project/dtec/tarballs/dependencies
@@ -317,7 +320,7 @@ for arg in $*; do
     --help)         usage; shift; exit 0;;
     -h)             usage; shift; exit 0;;
     --serial)       export parallelism="1"; shift;;
-    --keep-going)   export ROSE_CC="$(which KeepGoingTranslator.sh)"; shift;;
+    --keep-going)   export ROSE_CC="$(which KeepGoingTranslator.py)"; shift;;
     --disable-configure-step)   export ROSE_SH_ENABLE_CONFIGURE="false"; shift;;
     --clobber)      export ROSE_SH_CLOBBER_MODE="-rose:unparser:clobber_input_file"; shift;;
     --install-dependency)
