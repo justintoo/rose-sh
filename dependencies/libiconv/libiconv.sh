@@ -35,6 +35,9 @@ install_libiconv()
       tar xzvf "${LIBICONV_TARBALL}"                || fail "Unable to unpack application tarball"
       cd "$(basename ${LIBICONV_TARBALL%.tar.gz})"  || fail "Unable to change into application source directory"
 
+      # TOO1 (11/20/2015): https://lists.gnu.org/archive/html/grub-devel/2012-07/msg00051.html
+      sed -i -e '/gets is a security/d' srclib/stdio.in.h || fail "Unable to patch srclib/stdio.h"
+
       LDFLAGS="$LDFLAGS"    \
       CPPFLAGS="$CPPFLAGS"  \
       CFLAGS="$CFLAGS"      \
