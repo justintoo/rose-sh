@@ -2,7 +2,7 @@
 set -e
 
 export ROSE_SH_HOME="$(cd "$(dirname "$0")" && pwd)"
-export PATH="${ROSE_SH_HOME}/opt:${PATH}"
+export PATH="${ROSE_SH_HOME}/opt:${ROSE_SH_HOME}/opt/bin:${PATH}"
 export PYTHONPATH="${ROSE_SH_HOME}/opt/filelock-0.2.0/installation/lib/python2.7/site-packages:${PYTHONPATH}"
 
 source /nfs/casc/overture/ROSE/opt/rhel6/x86_64/sqlite/308002/gcc/4.4.5/setup.sh || true
@@ -12,8 +12,10 @@ source /nfs/casc/overture/ROSE/opt/rhel6/x86_64/sqlite/308002/gcc/4.4.5/setup.sh
 #-------------------------------------------------------------------------------
 : ${ROSE_CC:="$(which identityTranslator)"}
 : ${ROSE_CXX:="$(which identityTranslator)"}
+: ${ROSE_GFORTRAN:="$(which identityTranslator)"}
 : ${CC:="gcc"}
 : ${CXX:="g++"}
+: ${GFORTRAN:="gfortran"}
 : ${JAVAC:="javac"}
 : ${workspace:="$(pwd)/workspace"}
 : ${parallelism:=$(cat /proc/cpuinfo | grep processor | wc -l)}
@@ -320,7 +322,12 @@ for arg in $*; do
     --help)         usage; shift; exit 0;;
     -h)             usage; shift; exit 0;;
     --serial)       export parallelism="1"; shift;;
-    --keep-going)   export ROSE_CC="$(which KeepGoingTranslator.py)"; shift;;
+    --keep-going)
+        export ROSE_CC="$(which keep-going.py)"
+        export ROSE_CXX="$(which keep-going.py)"
+        export ROSE_GFORTRAN="$(which keep-going.py)"
+        shift;;
+    #--keep-going)   export ROSE_CC="$(which KeepGoingTranslator.py)"; shift;;
     --disable-configure-step)   export ROSE_SH_ENABLE_CONFIGURE="false"; shift;;
     --clobber)      export ROSE_SH_CLOBBER_MODE="-rose:unparser:clobber_input_file"; shift;;
     --install-dependency)
