@@ -80,31 +80,51 @@ compile_boxlib()
           # available... I guess for now we'll play it safe
           # Must run with verbose mode to get *all* compile lines
           #make -j$(cat /proc/cpuinfo | grep processor | wc -l) VERBOSE=1 2>&1 | tee output-boxlib-make-gcc.txt || exit 1
-          make -j8 VERBOSE=1 2>&1 | tee output-boxlib-make-gcc.txt || exit 1
+          make -j1 VERBOSE=1 2>&1 | tee output-boxlib-make-gcc.txt || exit 1
           if [ "${PIPESTATUS[0]}" -ne 0 ]; then
             echo "[FATAL] GCC compilation failed. Terminating..."
             exit 1
           fi
 
+#cat CMakeCache.txt | \
+#    sed 's/^\(CMAKE_Fortran_COMPILER:STRING\)=.*/\1=\${ROSE_GFORTRAN}/' | \
+#    sed 's/^\(CMAKE_C_COMPILER:STRING\)=.*/\1=\${ROSE_CC}/'             | \
+#    sed 's/^\(CMAKE_CXX_COMPILER:STRING\)=.*/\1=\${ROSE_CXX}/'          \
+#  > CMakeCache.txt-new
+#
+#mv CMakeCache.txt CMakeCache.txt-old
+#cp CMakeCache.txt-new CMakeCache.txt
+#
+#make
+#          if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+#            echo "[FATAL] GCC compilation failed. Terminating..."
+#            exit 1
+#          else
+#            exit 0
+#          fi
+
           # cd boxlib-src/Src/F_BaseLib && /nfs/apps/gcc/4.9.2/bin/gfortran
           #                             && /nfs/apps/gcc/4.9.2/bin/gcc
           #                             && /nfs/apps/gcc/4.9.2/bin/g++
           cat output-boxlib-make-gcc.txt |    \
-              grep "cc\|c++\|gcc\|g++\|gfortran" \
+              grep --invert "\[.*%\]"    |    \
+              grep --invert "^make "     |    \
+              grep "cc\|c++\|gcc\|g++"        \
           > gcc-commandlines.txt || exit 1
-              #grep "^cd .* gfortran$\|^cd .* gcc$\|^cd .* g++$" \
-          
+              #FORTRAN# grep "cc\|c++\|gcc\|g++\|gfortran" \
+
           # (3) Replace gcc compile lines with ${ROSE_CXX} variable
           # WORKSPACE/rose-workspace/build to WORKSPACE/rose-workspace/sources
           ROSE_WORKSPACE_ESCAPED="$(echo ${ROSE_WORKSPACE} | sed 's/\//\\\//g')"
           cat gcc-commandlines.txt                                  | \
-              sed 's/\(&&\) .*c++/\1 \${ROSE_CXX}/'      | \
-              sed 's/\(&&\) .*g++/\1 \${ROSE_CXX}/'      | \
-              sed 's/\(&&\) .*cc/\1 \${ROSE_CC}/'        | \
-              sed 's/\(&&\) .*gcc/\1 \${ROSE_CC}/'       | \
-              sed 's/\(&&\) .*gfortran/\1 \${ROSE_GFORTRAN}/'      | \
-              sed 's/^cd \(.*\) \(&& .*\)/cd "\$(dirname \1)" \2/' \
+              sed 's/\(&&\) .*c++ /\1 \${ROSE_CXX} /'      | \
+              sed 's/\(&&\) .*g++ /\1 \${ROSE_CXX} /'      | \
+              sed 's/\(&&\) .*cc /\1 \${ROSE_CC} /'        | \
+              sed 's/\(&&\) .*gcc /\1 \${ROSE_CC} /'       | \
+              sed 's/^cd \(.*\) \(&& .*\)/cd "\$(dirname \1)" \2/' | \
+              sed 's/^\(.* -o\) \(CMakeFiles\/.*\.o\) \(.*\)/mkdir -p "\$(dirname \2)"; \1 \2 \3/' \
           > make-rose-commandlines.txt
+              #FORTRAN#sed 's/\(&&\) .*gfortran/\1 \${ROSE_GFORTRAN}/'      | \
 
           cat <<EOF | cat - make-rose-commandlines.txt | sed 's/\(^\${ROSE_CXX}.*\)$/\1 || true/g' > make-rose.sh
 #!/bin/bash
