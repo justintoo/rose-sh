@@ -40,11 +40,11 @@ from optparse import OptionParser
 parser = argparse.ArgumentParser()
 
 def IsCxxFile(arg):
-  if arg.endswith('.C') or arg.endswith('.cxx')  or arg.endswith('.cc'):
+  if arg.endswith('.C') or arg.endswith('.cxx') or arg.endswith('.cpp'):
       return arg
 
 def IsCFile(arg):
-  if arg.endswith('.c'):
+  if arg.endswith('.c') or arg.endswith('.cc'):
       return arg
 
 def IsFortran(arg):
