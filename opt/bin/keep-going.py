@@ -51,6 +51,10 @@ def IsFortran(arg):
   if arg.endswith('.f') or arg.endswith('.f77') or arg.endswith('.f90'):
       return arg
 
+def IsObject(arg):
+  if arg.endswith('.o'):
+      return arg
+
 #--------------------------------------
 # --tool <toolname>
 #--------------------------------------
@@ -70,7 +74,7 @@ else:
 #--------------------------------------
 filenames = []
 for arg in unknown:
-  if IsCFile(arg) or IsCxxFile(arg) or IsFortran(arg):
+  if IsCFile(arg) or IsCxxFile(arg) or IsFortran(arg) or IsObject(arg):
     filenames.append(os.path.basename(arg))
 
 # Escape single quotes to retain them in commandline to tool
