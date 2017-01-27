@@ -35,6 +35,7 @@ export APPLICATIONS_LIST="$(ls ${APPLICATIONS_DIR}/ | xargs -I{} basename {} | s
   https://bitbucket.org/rose-compiler
   rose-dev@rosecompiler1.llnl.gov:rose/c
   rose-dev@rosecompiler1.llnl.gov:rose/cxx
+  rose-dev@rosecompiler1.llnl.gov:3rdparty/c
   rose-dev@rosecompiler1.llnl.gov:3rdparty/cxx
   }
 : ${TARBALL_MIRROR_URLS:=
