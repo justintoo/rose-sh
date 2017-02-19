@@ -9,9 +9,16 @@ download_mysql()
   info "Downloading source code"
 
   set -x
-      clone_repository "${application}" "${application}-src" || exit 1
-      cd "${application}-src/" || exit 1
+      #clone_repository "${application}" "${application}-src" || exit 1
+      #cd "${application}-src/" || exit 1
+
+      source /nfs/casc/overture/ROSE/opt/rhel7/x86_64/ncurses/6.0/setup.sh
+      wget https://dev.mysql.com/get/Downloads/MySQL-5.7/mysql-boost-5.7.17.tar.gz
+      tar xzvf mysql-boost-5.7.17.tar.gz
+      cd mysql-5.7.17/
+
       wget http://sourceforge.net/projects/boost/files/boost/1.59.0/boost_1_59_0.tar.gz
+      tar xzvf boost_1_59_0.tar.gz
   set +x
 }
 
@@ -40,10 +47,22 @@ configure_mysql__rose()
   #-----------------------------------------------------------------------------
       #CC="${ROSE_CC}" \
       #CXX="${ROSE_CXX}" \
-      CPPFLAGS="$CPPFLAGS" \
-      CFLAGS="$CFLAGS"  \
-      LDFLAGS="$LDFLAGS"  \
-      cmake . -DDOWNLOAD_BOOST=1 -DWITH_BOOST="$(pwd)" || fail "An error occurred during CMake bootstrapping"
+      #CC="gcc" \
+      #CXX="g++" \
+      #CPPFLAGS="$CPPFLAGS" \
+      #CFLAGS="$CFLAGS"  \
+      #LDFLAGS="$LDFLAGS"  \
+      LDFLAGS= \
+      CPPFLAGS= \
+      CXXFLAGS= \
+      CFLAGS= \
+      cmake . \
+        -DDOWNLOAD_BOOST=1 \
+        -DWITH_BOOST="$(pwd)/boost_1_59_0" \
+        -DCURSES_LIBRARY="${ROSE_SH_DEPS_PREFIX}/lib/libncurses.so" \
+        -DCURSES_INCLUDE_PATH="${ROSE_SH_DEPS_PREFIX}/include" \
+        -DCMAKE_CXX_FLAGS="-ltinfo -L${ROSE_SH_DEPS_PREFIX}/lib"|| fail "An error occurred during CMake bootstrapping"
+      #cmake . -DENABLE_DOWNLOADS=1 || fail "An error occurred during CMake bootstrapping"
   #-----------------------------------------------------------------------------
   set +x
   #-----------------------------------------------------------------------------
@@ -83,7 +102,7 @@ compile_mysql()
           # available... I guess for now we'll play it safe
           # Must run with verbose mode to get *all* compile lines
           #make -j$(cat /proc/cpuinfo | grep processor | wc -l) VERBOSE=1 2>&1 | tee output-mysql-make-gcc.txt || exit 1
-          make -j1 VERBOSE=1 2>&1 | tee output-mysql-make-gcc.txt || exit 1
+          make -j32 VERBOSE=1 2>&1 | tee output-mysql-make-gcc.txt || exit 1
           if [ "${PIPESTATUS[0]}" -ne 0 ]; then
             echo "[FATAL] GCC compilation failed. Terminating..."
             exit 1
@@ -131,15 +150,18 @@ compile_mysql()
 
           cat <<EOF | cat - make-rose-commandlines.txt | sed 's/\(^\${ROSE_CXX}.*\)$/\1 || true/g' > make-rose.sh
 #!/bin/bash
+
+export application_abs_srcdir="${application_abs_srcdir}"
+
 if [ -z "\${ROSE_CXX}" ]; then
   echo "[FATAL] ROSE_CXX is undefined"
   exit 1
 elif [ -z "\${ROSE_CC}" ]; then
   echo "[FATAL] ROSE_CC is undefined"
   exit 1
-elif [ -z "\${ROSE_GFORTRAN}" ]; then
-  echo "[FATAL] ROSE_GFORTRAN is undefined"
-  exit 1
+#elif [ -z "\${ROSE_GFORTRAN}" ]; then
+#  echo "[FATAL] ROSE_GFORTRAN is undefined"
+#  exit 1
 else
   echo "[DEBUG] ROSE_CXX='\${ROSE_CXX}'"
   echo "[DEBUG] ROSE_CC='\${ROSE_CC}'"
