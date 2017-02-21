@@ -15,6 +15,7 @@ download_mysql()
       source /nfs/casc/overture/ROSE/opt/rhel7/x86_64/ncurses/6.0/setup.sh
       wget https://dev.mysql.com/get/Downloads/MySQL-5.7/mysql-boost-5.7.17.tar.gz
       tar xzvf mysql-boost-5.7.17.tar.gz
+      ln -sf mysql-5.7.17 mysql-src
       cd mysql-5.7.17/
 
       wget http://sourceforge.net/projects/boost/files/boost/1.59.0/boost_1_59_0.tar.gz
