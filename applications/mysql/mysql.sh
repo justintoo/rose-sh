@@ -58,7 +58,6 @@ configure_mysql__rose()
       CXXFLAGS= \
       CFLAGS= \
       cmake . \
-        -DDOWNLOAD_BOOST=1 \
         -DWITH_BOOST="$(pwd)/boost_1_59_0" \
         -DCURSES_LIBRARY="${ROSE_SH_DEPS_PREFIX}/lib/libncurses.so" \
         -DCURSES_INCLUDE_PATH="${ROSE_SH_DEPS_PREFIX}/include" \
