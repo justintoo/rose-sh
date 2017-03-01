@@ -80,6 +80,9 @@ for arg in unknown:
 # Escape single quotes to retain them in commandline to tool
 args = ' '.join("'%s'" % arg.replace("'", "\\'") for arg in sys.argv[1:])
 
+# [ROSE-788] Could not open specified input file: TC_ARCH_X64
+args = args.replace("'-D' 'TC_ARCH_X64'", "'-DTC_ARCH_X64'")
+
 #------------------------------------------------------------------------------
 # Main Execution
 #------------------------------------------------------------------------------
