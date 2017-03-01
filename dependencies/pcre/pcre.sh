@@ -7,8 +7,11 @@
     --enable-utf
     --enable-pcregrep-libz
     --enable-pcregrep-libbz2
-    --enable-pcretest-libreadline
   }
+# TOO1 (02/28/2017): Failing to detect readline dependency; bypassing for
+# now since PCRE still compiles without this option. Need PCRE in toolchain
+# for TrueCrypt [ROSESH-2]
+#    --enable-pcretest-libreadline
 : ${PCRE_TARBALL:="pcre-8.31.tar.gz"}
 : ${PCRE_INSTALLED_FILE:="${ROSE_SH_DEPS_PREFIX}/include/pcre.h"}
 
@@ -41,7 +44,8 @@ install_pcre()
       tar xzvf "${PCRE_TARBALL}"                || fail "Unable to unpack application tarball"
       cd "$(basename ${PCRE_TARBALL%.tar.gz})"  || fail "Unable to change into application source directory"
 
-      ./configure ${PCRE_CONFIGURE_OPTIONS} || fail "Unable to configure application"
+      LIBS="-lncurses" \
+        ./configure ${PCRE_CONFIGURE_OPTIONS} || fail "Unable to configure application"
 
       make -j${parallelism}         || fail "An error occurred during application compilation"
       make -j${parallelism} install || fail "An error occurred during application installation"
