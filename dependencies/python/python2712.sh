@@ -4,7 +4,7 @@
     --libdir="${ROSE_SH_DEPS_LIBDIR}"
   }
 : ${PYTHON2712_TARBALL:="Python-2.7.12.tgz"}
-: ${PYTHON2712_INSTALLED_FILE:="${ROSE_SH_DEPS_PREFIX}/include/pyconfig.h"}
+: ${PYTHON2712_INSTALLED_FILE:="${ROSE_SH_DEPS_PREFIX}/include/python2.7/pyconfig.h"}
 
 #-------------------------------------------------------------------------------
 install_python2712()
