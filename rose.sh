@@ -133,7 +133,7 @@ download_tarball()
 
     info "Attempting tarball download: '${tarball_url}'"
 
-    curl -O -C - "${tarball_url}"
+    curl --location -O -C - "${tarball_url}"
     if test $? -eq 0; then
         return 0
     else
