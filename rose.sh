@@ -39,6 +39,7 @@ export APPLICATIONS_LIST="$(ls ${APPLICATIONS_DIR}/ | xargs -I{} basename {} | s
   rose-dev@rosecompiler1.llnl.gov:3rdparty/cxx
   }
 : ${TARBALL_MIRROR_URLS:=
+  file:///nfs/casc/overture/ROSE/rose-sh/tarballs
   http://hudson-rose-30.llnl.gov:8080/userContent/tarballs/dependencies
   https://bitbucket.org/rose-compiler/rose-sh/downloads
   https://rosecompiler1.llnl.gov:8443/jenkins-edg4x/userContent/tarballs/dependencies
@@ -132,7 +133,7 @@ download_tarball()
 
     info "Attempting tarball download: '${tarball_url}'"
 
-    wget --no-check-certificate "${tarball_url}"
+    curl -O -C - "${tarball_url}"
     if test $? -eq 0; then
         return 0
     else
