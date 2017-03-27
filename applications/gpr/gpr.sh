@@ -49,11 +49,8 @@ configure_gpr__rose()
   export ZMQ_ROOT=${ROSE_SH_DEPS_PREFIX}
   export BOOST_HOME=/nfs/casc/overture/ROSE/opt/rhel7/x86_64/boost/1_57_0/gcc/4.8.2
   export LD_LIBRARY_PATH=${DDS_ROOT}/lib/:${ACE_ROOT}/lib:${ZMQ_ROOT}/lib64:$LD_LIBRARY_PATH
-  echo "JIMSEZ PWD = ${PWD}"
-  echo "JIMSEZ APPLICATION_ABS_BUILDDIR = ${APPLICATION_ABS_BUILDDIR}"
-  echo "JIMSEZ application_abs_srcdir = ${application_abs_srcdir}"
 
-  cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=${CXX} -DOPENDDS_PATH=${DDS_ROOT}  -DACE_PATH=${ACE_ROOT} -DBOOST_ROOT=${BOOST_HOME} -DLibKML_DIR=${ROSE_SH_DEPS_PREFIX}/lib/cmake/libkml/ -DCMAKE_PREFIX_PATH=${ZMQ_ROOT}  ..
+  cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CC_COMPILER=${ROSE_CC} -DCMAKE_CXX_COMPILER=${ROSE_CXX} -DCMAKE_CC_FLAGS="-rose:keep_going" -DCMAKE_CXX_FLAGS="-rose:keep_going" -DOPENDDS_PATH=${DDS_ROOT}  -DACE_PATH=${ACE_ROOT} -DBOOST_ROOT=${BOOST_HOME} -DLibKML_DIR=${ROSE_SH_DEPS_PREFIX}/lib/cmake/libkml/ -DCMAKE_PREFIX_PATH=${ZMQ_ROOT}  ..
 #-DCMAKE_CXX_COMPILER=${ROSE_CC}  Temporarily configure this for replay instead of straight build.
   #-----------------------------------------------------------------------------
   set +x
@@ -80,11 +77,8 @@ configure_gpr__gcc()
   export ZMQ_ROOT=${ROSE_SH_DEPS_PREFIX}
   export BOOST_HOME=/nfs/casc/overture/ROSE/opt/rhel7/x86_64/boost/1_57_0/gcc/4.8.2
   export LD_LIBRARY_PATH=${DDS_ROOT}/lib/:${ACE_ROOT}/lib:${ZMQ_ROOT}/lib64:$LD_LIBRARY_PATH
-  echo "JIMSEZ PWD = ${PWD}"
-  echo "JIMSEZ APPLICATION_ABS_BUILDDIR = ${APPLICATION_ABS_BUILDDIR}"
-  echo "JIMSEZ application_abs_srcdir = ${application_abs_srcdir}"
 
-  cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=${CXX} -DOPENDDS_PATH=${DDS_ROOT}  -DACE_PATH=${ACE_ROOT} -DBOOST_ROOT=${BOOST_HOME} -DLibKML_DIR=${ROSE_SH_DEPS_PREFIX}/lib/cmake/libkml/ -DCMAKE_PREFIX_PATH=${ZMQ_ROOT}  ..
+  cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CC_COMPILER=${CC} -DCMAKE_CXX_COMPILER=${CXX} -DOPENDDS_PATH=${DDS_ROOT}  -DACE_PATH=${ACE_ROOT} -DBOOST_ROOT=${BOOST_HOME} -DLibKML_DIR=${ROSE_SH_DEPS_PREFIX}/lib/cmake/libkml/ -DCMAKE_PREFIX_PATH=${ZMQ_ROOT}  ..
 
 #  export LD_LIBRARY_PATH=${application_abs_srcdir}/tools/packages/openDDS/data-src/opt/DDS/lib/:${application_abs_srcdir}/tools/packages/openDDS/data-src/opt/ACE_wrappers/lib:${ROSE_SH_DEPS_PREFIX}/zmq/lib64:${LD_LIBRARY_PATH}
 #  export DDS_ROOT=${application_abs_srcdir}/tools/packages/openDDS/data-src/opt/DDS
@@ -108,7 +102,7 @@ compile_gpr()
   export APPLICATION_ABS_BUILDDIR=${application_abs_srcdir}/build
   cd ${APPLICATION_ABS_BUILDDIR}
 
-  make -j --keep-going V=1 WXSTATIC=1 || fail "An error occurred during application build"
+  make --keep-going VERBOSE=1 || fail "An error occurred during application build"
 
   #-----------------------------------------------------------------------------
   set +x
@@ -119,7 +113,7 @@ compile_gpr()
 replay_gpr()
 #-------------------------------------------------------------------------------
 {
-  info "Compiling GPR with rose replay"
+  info "Compiling GPR with rose replay DOES NOT CURRENTLY WORK"
 
   #-----------------------------------------------------------------------------
   set -x
@@ -156,9 +150,18 @@ replay_gpr()
               sed 's/\(&&\) .*cc /\1 \${ROSE_CC} /'        | \
               sed 's/\(&&\) .*gcc /\1 \${ROSE_CC} /'       | \
               sed 's/^cd \(.*\) \(&& .*\)/cd "\$(dirname \1)" \2/' | \
-              sed 's/^\(.* -o\) \(CMakeFiles\/.*\.o\) \(.*\)/mkdir -p "\$(dirname \2)"; \1 \2 \3/' \
+              sed 's/^cd \(.* &&\) \(.* -o\) \(CMakeFiles\/.*\.o\) \(.*\) / cd \1  mkdir -p "\$(dirname \3)" ; \2 \3 \4/' \
           > make-rose-commandlines.txt
-              #FORTRAN#sed 's/\(&&\) .*gfortran/\1 \${ROSE_GFORTRAN}/'      | \
+# line 2 comment:  #Following the &&, replace anything g++ with ${ROSE_CXX} (note actual value 
+# line 5 comment: #changes first cd command to cd to the directory one ABOVE it.
+# line 6 comment: This is such a complex line I think it needs big explanation.
+# This line inserts a mkdir command between the cd and actually running the code.  
+#   The mkdir just makes SURE the CMake special directory is made before trying to write the .o file there.
+#   This mimics the CMake build system, which builds in subtree that matches the src tree, but makes a special CMakeFiles directory where the .o files go.
+# So here we need to cd to the correct spot in the build tree (that matches the src directory) then make sure the CMakeFiles sub-directory exists,
+#    then actually do the build so that the .o file ends up there.
+# For some reasonthe other replay scripts put the mkdir before the cd.  I don't know why that works, because in this tree we aren't in the
+#    correct directory to be making the special dir.
 
           cat <<EOF | cat - make-rose-commandlines.txt | sed 's/\(^\${ROSE_CXX}.*\)$/\1 || true/g' > make-rose.sh
 #!/bin/bash
