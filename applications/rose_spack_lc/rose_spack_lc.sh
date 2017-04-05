@@ -4,7 +4,7 @@
 
 : ${COMPILER_SPEC:=%gcc@4.8.5}
 : ${BOOST_SPEC:="boost@1.56.0"}
-: ${ROSE_BRANCH:=master}
+: ${ROSE_BRANCH:=origin/master}
 : ${ROSE_BRANCH_VARIANT_NAME:=}
 
 #-------------------------------------------------------------------------------
@@ -41,8 +41,9 @@ source "${SPACK_HOME}/setup-new.sh"
 # Add gcc-4.8.5p
 spack compiler find
 
-git clone --branch "${ROSE_BRANCH}" https://github.com/rose-compiler/rose-develop.git rose --reference /g/g12/too1/projects/rose.git || exit 1
+git clone https://github.com/rose-compiler/rose-develop.git rose --reference /g/g12/too1/projects/rose.git || exit 1
 pushd rose/
+    git checkout "${ROSE_BRANCH}" || exit 1
     export ROSE_COMMIT="$(git log HEAD -1 --format=%H)"
     export ROSE_VERSION="$(cat ./ROSE_VERSION)${ROSE_BRANCH_VARIANT_NAME}"
     git log -3 | tee git-log.txt
