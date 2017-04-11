@@ -145,7 +145,8 @@ compile_rose_spack_lc_historical()
     # (2.2) Add this ROSE commit and version to Spack
     # ================================================================
     # (2.2.1) Define a new ROSE version for SPACK/...../rose/package.py
-    echo "version('__ROSE_VERSION__', commit='__ROSE_COMMIT__', git='rose-dev@rosecompiler1.llnl.gov:rose/scratch/rose.git')" | \
+    # Note: Using 4 leading spaces to match the indentation in rose/package.py
+    echo "    version('__ROSE_VERSION__', commit='__ROSE_COMMIT__', git='rose-dev@rosecompiler1.llnl.gov:rose/scratch/rose.git')" | \
       sed \
         -e "s/__ROSE_COMMIT__/${ROSE_COMMIT}/" \
         -e "s/__ROSE_VERSION__/${ROSE_VERSION}/" \
