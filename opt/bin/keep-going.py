@@ -55,6 +55,17 @@ def IsObject(arg):
   if arg.endswith('.o'):
       return arg
 
+def IsHeader(arg):
+  if arg.endswith('.h'):
+      return arg
+
+cc = os.environ.get('SYSTEM_CC')
+cxx = os.environ.get('SYSTEM_CXX')
+flags = os.environ.get('ROSESH_FLAGS')
+
+print >> sys.stdout, "[INFO] SYSTEM_CC=%s" % (cc)
+print >> sys.stdout, "[INFO] SYSTEM_CXX=%s" % (cxx)
+
 #--------------------------------------
 # --tool <toolname>
 #--------------------------------------
@@ -65,6 +76,7 @@ options, unknown = parser.parse_known_args()
 if options.tool:
   # Don't pass this option on to the tool, see http://stackoverflow.com/questions/35733262/is-there-any-way-to-instruct-argparse-python-2-7-to-remove-found-arguments-fro
   sys.argv = sys.argv[:1] + unknown
+  tool = options.tool
 else:
   print >> sys.stderr, "[FATAL] --tool <toolname> was not specified"
   exit(10)
@@ -74,8 +86,13 @@ else:
 #--------------------------------------
 filenames = []
 for arg in unknown:
-  if IsCFile(arg) or IsCxxFile(arg) or IsFortran(arg) or IsObject(arg):
+  if IsCFile(arg) or IsCxxFile(arg) or IsFortran(arg) or IsObject(arg) or IsHeader(arg):
     filenames.append(os.path.basename(arg))
+
+  if IsCFile(arg):
+    default_compiler = cc
+  elif IsCxxFile(arg):
+    default_compiler = cxx
 
 # Escape single quotes to retain them in commandline to tool
 args = ' '.join("'%s'" % arg.replace("'", "\\'") for arg in sys.argv[1:])
@@ -87,9 +104,25 @@ args = args.replace("'-D' 'TC_ARCH_X64'", "'-DTC_ARCH_X64'")
 # Main Execution
 #------------------------------------------------------------------------------
 try:
-  cmd = '%s %s' % (options.tool, args)
+  cmd = '%s %s %s' % (tool, args, flags)
   print >> sys.stdout, '+', cmd
   retcode = subprocess.call(cmd, shell=True)
+
+  # Try to run the original commandline with the default compiler
+  if retcode == 1:
+    print >> sys.stdout, '[ERROR] Failed requested tool commandline, trying to keep going with the default compiler next...'
+
+    cmd = '%s %s %s' % (default_compiler, args, flags)
+    print >> sys.stdout, '+', cmd
+    retcode = subprocess.call(cmd, shell=True)
+
+    # The default compiler should be able to compile this file. If not, terminate with a fatal error.
+    if retcode == 1:
+      print >> sys.stdout, '[FATAL] Default compiler commandline failed - can this file even be compiled?'
+      exit(1)
+
+    # Still want to log a failure, even though we "kept going"
+    retcode = 1
 
   try:
       #------------------------------------------------------------------------
