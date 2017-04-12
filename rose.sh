@@ -21,7 +21,7 @@ source /nfs/casc/overture/ROSE/opt/rhel6/x86_64/sqlite/308002/gcc/4.4.5/setup.sh
 : ${parallelism:=$(cat /proc/cpuinfo | grep processor | wc -l)}
 : ${VERBOSE:=1}
 : ${TMPDIR:=/tmp}
-: ${ROSESH_INTERACTIVE_SHELL:=false}
+: ${ROSESH_INTERACTIVE_SHELL:=no}
 
 export ROSE_CC
 export ROSE_CXX
@@ -345,7 +345,7 @@ for arg in $*; do
     --disable-configure-step)   export ROSE_SH_ENABLE_CONFIGURE="false"; shift;;
     --clobber)      export ROSE_SH_CLOBBER_MODE="-rose:unparser:clobber_input_file"; shift;;
     --shell)
-        export ROSESH_INTERACTIVE_SHELL=true 
+        export ROSESH_INTERACTIVE_SHELL=yes
         continue
         ;;
     --install-dependency)
@@ -422,7 +422,7 @@ fi
 #-------------------------------------------------------------------------------
 # Interactive Shell (--shell)
 #-------------------------------------------------------------------------------
-if test "${ROSESH_INTERACTIVE_SHELL}"; then
+if test "x${ROSESH_INTERACTIVE_SHELL}" = "xyes"; then
   if test -n "${application}"; then
     cmd__cd_into_app_srcdir="$(cat <<EOF
 cd ${application_abs_srcdir};
