@@ -10,9 +10,9 @@ source /nfs/casc/overture/ROSE/opt/rhel6/x86_64/sqlite/308002/gcc/4.4.5/setup.sh
 #-------------------------------------------------------------------------------
 # Set defaults
 #-------------------------------------------------------------------------------
-: ${ROSE_CC:="$(which identityTranslator)"}
-: ${ROSE_CXX:="$(which identityTranslator)"}
-: ${ROSE_GFORTRAN:="$(which identityTranslator)"}
+: ${ROSE_CC:="identityTranslator"}
+: ${ROSE_CXX:="identityTranslator"}
+: ${ROSE_GFORTRAN:="identityTranslator"}
 : ${CC:="gcc"}
 : ${CXX:="g++"}
 : ${GFORTRAN:="gfortran"}
@@ -21,6 +21,19 @@ source /nfs/casc/overture/ROSE/opt/rhel6/x86_64/sqlite/308002/gcc/4.4.5/setup.sh
 : ${parallelism:=$(cat /proc/cpuinfo | grep processor | wc -l)}
 : ${VERBOSE:=1}
 : ${TMPDIR:=/tmp}
+: ${ROSESH_INTERACTIVE_SHELL:=false}
+
+export ROSE_CC
+export ROSE_CXX
+export ROSE_GFORTRAN
+export CC
+export CXX
+export GFORTRAN
+export JAVAC
+export parallelism
+export VERBOSE
+export TMPDIR
+export ROSESH_INTERACTIVE_SHELL
 
 #-------------------------------------------------------------------------------
 export APPLICATIONS_DIR="${ROSE_SH_HOME}/applications"
@@ -208,8 +221,6 @@ phase_1()
 {
   info "Performing Phase 1"
 
-  export application_abs_srcdir="${application_workspace}/phase_1/${application}-src"
-
   mkdir -p "${application_workspace}/phase_1" || fail "phase_1::create_workspace failed"
   pushd "${application_workspace}/phase_1"    || fail "phase_1::cd_into_workspace failed"
       "install_deps_${application}"           || fail "phase_1::install_deps failed with status='$?'"
@@ -333,6 +344,10 @@ for arg in $*; do
     #--keep-going)   export ROSE_CC="$(which KeepGoingTranslator.py)"; shift;;
     --disable-configure-step)   export ROSE_SH_ENABLE_CONFIGURE="false"; shift;;
     --clobber)      export ROSE_SH_CLOBBER_MODE="-rose:unparser:clobber_input_file"; shift;;
+    --shell)
+        export ROSESH_INTERACTIVE_SHELL=true 
+        continue
+        ;;
     --install-dependency)
         export ROSE_SH__ACTION__INSTALL_DEPENDENCY="true"
         shift
@@ -371,16 +386,14 @@ export ANT_HOME="${ROSE_SH_DEPS_PREFIX}"
 # TOO1 (2/11/2014): Required for proper use of ROSE_SH/dependencies/installation/bin/mvn.
 export M2_HOME="${ROSE_SH_DEPS_PREFIX}"
 
+#-------------------------------------------------------------------------------
+# Application
+#-------------------------------------------------------------------------------
 export APPLICATION_SCRIPT="${APPLICATIONS_DIR}/${application}/${application}.sh"
 : ${application_workspace:="${workspace}/${application}"}
 : ${application_log:="${application_workspace}/output.txt-$(date +%Y%m%d-%H%M%S)-$$"}
 
-# Build in a separate workspace, so we don't pollute the user's current directory.
-if [ "x${ROSE_SH_REUSE_WORKSPACE}" != "xtrue" ]; then
-    rm -rf "${application_workspace}"   || fail "main::remove_workspace failed"
-fi
-mkdir -p "${application_workspace}" || fail "main::create_workspace failed"
-pushd "${application_workspace}"    || fail "main::cd_into_workspace failed"
+export application_abs_srcdir="${application_workspace}/phase_1/${application}-src"
 
 #-------------------------------------------------------------------------------
 # Source default dependencies
@@ -405,6 +418,43 @@ if [ "x${ROSE_SH__ACTION__INSTALL_DEPENDENCY}" = "xtrue" ]; then
   echo "Successfully installed dependency '$1'"
   exit 0
 fi
+
+#-------------------------------------------------------------------------------
+# Interactive Shell (--shell)
+#-------------------------------------------------------------------------------
+if test "${ROSESH_INTERACTIVE_SHELL}"; then
+  if test -n "${application}"; then
+    cmd__cd_into_app_srcdir="$(cat <<EOF
+cd ${application_abs_srcdir};
+echo "Current directory for ${application}: \$(pwd)"
+echo "==============================================================================="
+export PS1="\${PS1}[${application}] "
+EOF
+)"
+  fi
+
+  PS1="[rose-sh] " bash --init-file <(cat <<-EOF
+echo "==============================================================================="
+echo "=| Welcome to the rose-sh interactive terminal!"
+echo "=|"
+echo "=| To exit, please press control-d"
+echo "==============================================================================="
+  ${cmd__cd_into_app_srcdir}
+EOF
+  )
+
+  exit $?
+fi
+
+#-------------------------------------------------------------------------------
+# Workspace
+#-------------------------------------------------------------------------------
+# Build in a separate workspace, so we don't pollute the user's current directory.
+if [ "x${ROSE_SH_REUSE_WORKSPACE}" != "xtrue" ]; then
+    rm -rf "${application_workspace}"   || fail "main::remove_workspace failed"
+fi
+mkdir -p "${application_workspace}" || fail "main::create_workspace failed"
+pushd "${application_workspace}" >/dev/null    || fail "main::cd_into_workspace failed"
 
 #-------------------------------------------------------------------------------
 # Entry point for program execution
