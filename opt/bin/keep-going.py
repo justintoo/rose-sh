@@ -23,15 +23,27 @@ cwd             = os.getcwd()
 #------------------------------------------------------------------------------
 def db__save_file_status(filename, directory, passed, commandline):
   print >> sys.stdout, "\n[INFO] Saving to database %s: '%s', '%s', '%d', '%s'" % (rose_database, filename, directory, passed, commandline)
-  conn = sqlite3.connect(rose_database)
-  c = conn.cursor()
 
-  c.execute('''CREATE TABLE IF NOT EXISTS results
-               (filename text, directory text, passed BOOLEAN, commandline text)''')
+  timeout = 10000
 
-  c.execute("INSERT INTO results VALUES (?, ?, ?, ?)", (filename, directory, passed, commandline))
-  conn.commit()
-  conn.close()
+  connection = sqlite3.connect(rose_database)
+  c = connection.cursor()
+
+  for x in range(0, timeout):
+    try:
+      with connection:
+        c.execute('''CREATE TABLE IF NOT EXISTS results
+                     (filename text, directory text, passed BOOLEAN, commandline text)''')
+        c.execute("INSERT INTO results VALUES (?, ?, ?, ?)", (filename, directory, passed, commandline))
+        break
+    except:
+      time.sleep(1)
+      pass
+    finally:
+      break
+
+  connection.commit()
+  connection.close()
 
 #------------------------------------------------------------------------------
 # CLI
@@ -59,9 +71,9 @@ def IsHeader(arg):
   if arg.endswith('.h'):
       return arg
 
-cc = os.environ.get('SYSTEM_CC')
-cxx = os.environ.get('SYSTEM_CXX')
-flags = os.environ.get('ROSESH_FLAGS')
+cc = os.environ.get('SYSTEM_CC') or "gcc"
+cxx = os.environ.get('SYSTEM_CXX') or "g++"
+flags = os.environ.get('ROSESH_FLAGS') or ""
 
 print >> sys.stdout, "[INFO] SYSTEM_CC=%s" % (cc)
 print >> sys.stdout, "[INFO] SYSTEM_CXX=%s" % (cxx)
@@ -109,20 +121,20 @@ try:
   retcode = subprocess.call(cmd, shell=True)
 
   # Try to run the original commandline with the default compiler
-  if retcode == 1:
-    print >> sys.stdout, '[ERROR] Failed requested tool commandline, trying to keep going with the default compiler next...'
+  #if retcode == 1:
+  #  print >> sys.stdout, '[ERROR] Failed requested tool commandline, trying to keep going with the default compiler next...'
 
-    cmd = '%s %s %s' % (default_compiler, args, flags)
-    print >> sys.stdout, '+', cmd
-    retcode = subprocess.call(cmd, shell=True)
+  #  cmd = '%s %s %s' % (default_compiler, args, flags)
+  #  print >> sys.stdout, '+', cmd
+  #  retcode = subprocess.call(cmd, shell=True)
 
-    # The default compiler should be able to compile this file. If not, terminate with a fatal error.
-    if retcode == 1:
-      print >> sys.stdout, '[FATAL] Default compiler commandline failed - can this file even be compiled?'
-      exit(1)
+  #  # The default compiler should be able to compile this file. If not, terminate with a fatal error.
+  #  if retcode == 1:
+  #    print >> sys.stdout, '[FATAL] Default compiler commandline failed - can this file even be compiled?'
+  #    exit(1)
 
-    # Still want to log a failure, even though we "kept going"
-    retcode = 1
+  #  # Still want to log a failure, even though we "kept going"
+  #  retcode = 1
 
   try:
       #------------------------------------------------------------------------
