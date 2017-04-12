@@ -423,6 +423,9 @@ fi
 # Interactive Shell (--shell)
 #-------------------------------------------------------------------------------
 if test "x${ROSESH_INTERACTIVE_SHELL}" = "xyes"; then
+  #----------------------------------------------------------------------------
+  # Change into application source directory
+  #----------------------------------------------------------------------------
   if test -n "${application}"; then
     cmd__cd_into_app_srcdir="$(cat <<EOF
 cd ${application_abs_srcdir};
@@ -433,6 +436,27 @@ EOF
 )"
   fi
 
+  #----------------------------------------------------------------------------
+  # Change into application source directory
+  #----------------------------------------------------------------------------
+  cmd__functions_for_sqlite3_results="$(cat <<EOF
+rose_sh_${application}_database="${application_abs_srcdir}/rose-results.db"
+
+function rose-sh-${application}-results() {
+  sqlite3 \${rose_sh_${application}_database} '.schema';
+  sqlite3 \${rose_sh_${application}_database};
+}
+
+function rose-sh-${application}-passes() {
+  sqlite3 \${rose_sh_${application}_database} 'select count(*) from results where passed=1;'
+}
+
+function rose-sh-${application}-failures() {
+  sqlite3 \${rose_sh_${application}_database} 'select count(*) from results where passed=0;'
+}
+EOF
+)"
+
   PS1="[rose-sh] " bash --init-file <(cat <<-EOF
 echo "==============================================================================="
 echo "=| Welcome to the rose-sh interactive terminal!"
@@ -440,6 +464,7 @@ echo "=|"
 echo "=| To exit, please press control-d"
 echo "==============================================================================="
   ${cmd__cd_into_app_srcdir}
+  ${cmd__functions_for_sqlite3_results}
 EOF
   )
 
