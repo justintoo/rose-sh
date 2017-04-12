@@ -101,8 +101,8 @@ compile_mysql()
           # guess it may not be necessary since all dependencies are already
           # available... I guess for now we'll play it safe
           # Must run with verbose mode to get *all* compile lines
-          #make -j$(cat /proc/cpuinfo | grep processor | wc -l) VERBOSE=1 2>&1 | tee output-mysql-make-gcc.txt || exit 1
-          make -j32 VERBOSE=1 2>&1 | tee output-mysql-make-gcc.txt || exit 1
+          make -j$(cat /proc/cpuinfo | grep processor | wc -l) VERBOSE=1 2>&1 | tee output-mysql-make-gcc.txt || exit 1
+#          make -j32 VERBOSE=1 2>&1 | tee output-mysql-make-gcc.txt || exit 1
           if [ "${PIPESTATUS[0]}" -ne 0 ]; then
             echo "[FATAL] GCC compilation failed. Terminating..."
             exit 1
@@ -131,24 +131,39 @@ compile_mysql()
           cat output-mysql-make-gcc.txt |    \
               grep --invert "\[.*%\]"    |    \
               grep --invert "^make "     |    \
+              grep --invert "^Building CXX object "     |    \
+              grep --invert "is newer than depender"     |    \
               grep "cc\|c++\|gcc\|g++"        \
           > gcc-commandlines.txt || exit 1
               #FORTRAN# grep "cc\|c++\|gcc\|g++\|gfortran" \
 
           # (3) Replace gcc compile lines with ${ROSE_CXX} variable
-          # WORKSPACE/rose-workspace/build to WORKSPACE/rose-workspace/sources
-          ROSE_WORKSPACE_ESCAPED="$(echo ${ROSE_WORKSPACE} | sed 's/\//\\\//g')"
+          #
+          # Building CXX object
+          # (1) Grep for only ROSE_CXX commandlines, else
+          #
+          #     $ cat make-rose-commandlines.txt  | grep "ROSE_CC\|ROSE_CXX"
+          #
+          # (2) Remove all extra commandlines
+          #
+          #     $ cat make-rose-commandlines.txt  | grep --invert "ROSE_CC" | grep --invert "ROSE_CXX" | grep --invert "^Building CXX object " | grep --invert c++ | grep --invert "\/usr\/bin\/ar" | grep --invert "Built target" | grep --invert "^Building C object " | grep --invert "libprotobuf WARNING" | grep --invert "/usr/bin/cc" | grep --invert "cmake_depends" | grep --invert "^Dependee " | grep --invert "Scanning dependencies of " | grep --invert "Linking CXX executable" | grep --invert "/usr/bin/cmake"
+
+          # Reorder so `mkdir` comes after `cd`:
+          # sed 's/^\(mkdir.*\); \(cd .*\) && \(.*\)/\2 \&\& \1 \&\& \3/' \
+
           cat gcc-commandlines.txt                                  | \
               sed 's/\(&&\) .*c++ /\1 \${ROSE_CXX} /'      | \
               sed 's/\(&&\) .*g++ /\1 \${ROSE_CXX} /'      | \
               sed 's/\(&&\) .*cc /\1 \${ROSE_CC} /'        | \
               sed 's/\(&&\) .*gcc /\1 \${ROSE_CC} /'       | \
               sed 's/^cd \(.*\) \(&& .*\)/cd "\$(dirname \1)" \2/' | \
-              sed 's/^\(.* -o\) \(CMakeFiles\/.*\.o\) \(.*\)/mkdir -p "\$(dirname \2)"; \1 \2 \3/' \
+              sed 's/^\(.* -o\) \(CMakeFiles\/.*\.o\) \(.*\)/mkdir -p "\$(dirname \2)"; \1 \2 \3/' | \
+              grep "ROSE_CC\|ROSE_CXX" | \
+              sed 's/^\(mkdir.*\); \(cd .*\) && \(.*\)/\2 \&\& \1 \&\& \3/' \
           > make-rose-commandlines.txt
               #FORTRAN#sed 's/\(&&\) .*gfortran/\1 \${ROSE_GFORTRAN}/'      | \
 
-          cat <<EOF | cat - make-rose-commandlines.txt | sed 's/\(^\${ROSE_CXX}.*\)$/\1 || true/g' > make-rose.sh
+          cat <<EOF | cat - make-rose-commandlines.txt | sed 's/\(^\${ROSE_CXX}.*\)$/\1 || true/g' > make-rose-sequential.sh
 #!/bin/bash
 
 export application_abs_srcdir="${application_abs_srcdir}"
@@ -170,8 +185,42 @@ else
 fi
 EOF
 
-          chmod +x make-rose.sh
-          time ./make-rose${ROSE_DEBUG:+-debug}.sh || exit 1
+          # TOO1 (04/11/17): Run sequential commandlines
+          #chmod +x make-rose-sequential.sh
+          #time ./make-rose${ROSE_DEBUG:+-debug}.sh || exit 1
+
+          # TODO: Figure out why there are duplicate files
+          cat make-rose-commandlines.txt | sort | uniq > make-rose-commandlines-unique.txt
+
+          # Generate a Makefile of all the commandlines in order to:
+          #
+          #   1. Conveniently re-run the command manually with make 
+          #   2. Run in parallel with `make -jN`
+
+          # Create new empty file                  
+          ROSE_MAKEFILE="make-rose-commandlines.makefile"
+          echo > "${ROSE_MAKEFILE}"
+          
+          # Obtain list of all filenames
+          targets=""
+          while read -r rose_cmdline || [[ -n "$line" ]]; do
+            filename="$(echo "${rose_cmdline}" | sed 's/-c \(.*\)$/\1/')"
+            basename="$(basename "${filename}")"
+            targets="${targets} ${basename}"
+          done < "make-rose-commandlines-unique.txt"
+          
+          # add all targets to default Make target                               
+          echo "all: ${targets}" >> "${ROSE_MAKEFILE}"
+          
+          while read -r rose_cmdline || [[ -n "$line" ]]; do
+            filename="$(echo "${rose_cmdline}" | sed 's/-c \(.*\)$/\1/')"
+            basename="$(basename "${filename}")"
+          
+            echo "${basename}:" >> "${ROSE_MAKEFILE}"
+            echo -e "\t$(echo "${rose_cmdline}" | sed 's/[$]/$$/g')\n\n" >> "${ROSE_MAKEFILE}"
+          done < "make-rose-commandlines-unique.txt"
+          
+          make VERBOSE=1 -j${parallelism} -f "${ROSE_MAKEFILE}" || fail "An error occurred during application compilation"
 
 # Extract results from Sqlite database and save to files:
 #
