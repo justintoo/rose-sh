@@ -11,12 +11,12 @@ download_mysql()
   set -x
       #clone_repository "${application}" "${application}-src" || exit 1
       #cd "${application}-src/" || exit 1
+      #source /nfs/casc/overture/ROSE/opt/rhel7/x86_64/ncurses/6.0/setup.sh
 
-      source /nfs/casc/overture/ROSE/opt/rhel7/x86_64/ncurses/6.0/setup.sh
       wget https://dev.mysql.com/get/Downloads/MySQL-5.7/mysql-boost-5.7.17.tar.gz
       tar xzvf mysql-boost-5.7.17.tar.gz
       ln -sf mysql-5.7.17 mysql-src
-      cd mysql-5.7.17/
+      cd mysql-src
 
       wget http://sourceforge.net/projects/boost/files/boost/1.59.0/boost_1_59_0.tar.gz
       tar xzvf boost_1_59_0.tar.gz
@@ -189,8 +189,9 @@ EOF
           #chmod +x make-rose-sequential.sh
           #time ./make-rose${ROSE_DEBUG:+-debug}.sh || exit 1
 
-          # TODO: Figure out why there are duplicate files
-          cat make-rose-commandlines.txt | sort | uniq > make-rose-commandlines-unique.txt
+          # Sort by last column, which should be the MySQL input filename
+          # (http://stackoverflow.com/questions/1915636/is-there-a-way-to-uniq-by-column)
+          cat make-rose-commandlines.txt | awk -F" " '!_[$NF]++' > make-rose-commandlines-unique.txt
 
           # Generate a Makefile of all the commandlines in order to:
           #
@@ -199,26 +200,47 @@ EOF
 
           # Create new empty file                  
           ROSE_MAKEFILE="make-rose-commandlines.makefile"
-          echo > "${ROSE_MAKEFILE}"
+          cat > "${ROSE_MAKEFILE}" <<MAKEFILE
+V = 0
+V_0 = @echo "Compiling \$@";
+V_1 =
+VERBOSE = \$(V_\$(V))
+
+LOG_OUTPUT_0 = 1>/dev/null
+LOG_OUTPUT_1 =
+LOG_OUTPUT = \$(LOG_OUTPUT_\$(V))
+MAKEFILE
           
-          # Obtain list of all filenames
+          # Variable to hold list of all make targets
           targets=""
-          while read -r rose_cmdline || [[ -n "$line" ]]; do
-            filename="$(echo "${rose_cmdline}" | sed 's/-c \(.*\)$/\1/')"
-            basename="$(basename "${filename}")"
-            targets="${targets} ${basename}"
-          done < "make-rose-commandlines-unique.txt"
           
-          # add all targets to default Make target                               
+          while read -r rose_cmdline || [[ -n "$line" ]]; do
+            filepath="$(echo "${rose_cmdline}" | sed 's/.* -c \(.*\)$/\1/')"
+            basename="$(basename "${filepath}")"
+            extension="${basename##*.}"
+            filename="${basename%.*}"
+
+            # Input: cd "$$(dirname /export/tmp.hudson-rose/tmp/ROSESH-13-mysql-parallel-replay/rose-sh/workspace/mysql/phase_1/mysql-5.7.17/storage/perfschema/unittest)" &&
+            directory="$(dirname "${filepath}")"
+            # relative directory within the MySQL source tree
+            relative_directory="${directory#${application_abs_srcdir}/}"
+
+            # add to "make all" target
+            targets="${targets} ${relative_directory}/rose_${basename}"
+
+            # make rose_<filename>.<extension>
+            # Escape $ in makefiles: sed 's/[$]/$$/g'
+            cat >> "${ROSE_MAKEFILE}" <<MAKEFILE
+
+${relative_directory}/rose_${basename}: ${filepath}
+$(echo -e "\t\$(VERBOSE)$(echo "${rose_cmdline}" | sed 's/[$]/$$/g')\n\n") \$(LOG_OUTPUT)
+MAKEFILE
+            #echo "${basename}:" >> "${ROSE_MAKEFILE}"
+            #echo -e "\t$(echo "${rose_cmdline}" | sed 's/[$]/$$/g')\n\n" >> "${ROSE_MAKEFILE}"
+          done < "make-rose-commandlines-unique.txt"
+
+          # add all targets to default Make target "all"
           echo "all: ${targets}" >> "${ROSE_MAKEFILE}"
-          
-          while read -r rose_cmdline || [[ -n "$line" ]]; do
-            filename="$(echo "${rose_cmdline}" | sed 's/-c \(.*\)$/\1/')"
-            basename="$(basename "${filename}")"
-          
-            echo "${basename}:" >> "${ROSE_MAKEFILE}"
-            echo -e "\t$(echo "${rose_cmdline}" | sed 's/[$]/$$/g')\n\n" >> "${ROSE_MAKEFILE}"
-          done < "make-rose-commandlines-unique.txt"
           
           make VERBOSE=1 -j${parallelism} -f "${ROSE_MAKEFILE}" || fail "An error occurred during application compilation"
 
