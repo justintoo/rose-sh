@@ -242,7 +242,7 @@ MAKEFILE
           # add all targets to default Make target "all"
           echo "all: ${targets}" >> "${ROSE_MAKEFILE}"
           
-          make VERBOSE=1 -j${parallelism} -f "${ROSE_MAKEFILE}" || fail "An error occurred during application compilation"
+          make V=${VERBOSE} -j${parallelism} -f "${ROSE_MAKEFILE}" || fail "An error occurred during application compilation"
 
 # Extract results from Sqlite database and save to files:
 #
