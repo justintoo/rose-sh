@@ -420,6 +420,17 @@ if [ "x${ROSE_SH__ACTION__INSTALL_DEPENDENCY}" = "xtrue" ]; then
 fi
 
 #-------------------------------------------------------------------------------
+# Sanity Checks
+#-------------------------------------------------------------------------------
+if test -z "$(which "${ROSE_CC}")"; then
+  fail "\$ROSE_CC does not exist"
+fi
+
+if test -z "$(which "${ROSE_CXX}")"; then
+  fail "\$ROSE_CXX does not exist"
+fi
+
+#-------------------------------------------------------------------------------
 # Interactive Shell (--shell)
 #-------------------------------------------------------------------------------
 if test "x${ROSESH_INTERACTIVE_SHELL}" = "xyes"; then
