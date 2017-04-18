@@ -198,7 +198,7 @@ EOF
           #   1. Conveniently re-run the command manually with make 
           #   2. Run in parallel with `make -jN`
 
-          # Create new empty file                  
+          # Create the Makefile header
           ROSE_MAKEFILE="make-rose-commandlines.makefile"
           cat > "${ROSE_MAKEFILE}" <<MAKEFILE
 V = 0
@@ -209,31 +209,44 @@ VERBOSE = \$(V_\$(V))
 LOG_OUTPUT_0 = 1>/dev/null
 LOG_OUTPUT_1 =
 LOG_OUTPUT = \$(LOG_OUTPUT_\$(V))
+
+default: all
+
+# http://stackoverflow.com/questions/4219255/how-do-you-get-the-list-of-targets-in-a-makefile
+print-all-targets:
+$(echo -e "\t")@\$(MAKE) -pRrq -f \$(lastword \$(MAKEFILE_LIST)) : 2>/dev/null | awk -v RS= -F: '/^# File/,/^# Finished Make data base/ {if (\$\$1 !~ "^[#.]") {print \$\$1}}' | sort | egrep -v -e '^[^[:alnum:]]' -e '^\$@\$\$' | xargs
 MAKEFILE
           
           # Variable to hold list of all make targets
           targets=""
           
           while read -r rose_cmdline || [[ -n "$line" ]]; do
+            # -c <filepath>
             filepath="$(echo "${rose_cmdline}" | sed 's/.* -c \(.*\)$/\1/')"
             basename="$(basename "${filepath}")"
             extension="${basename##*.}"
             filename="${basename%.*}"
 
-            # Input: cd "$$(dirname /export/tmp.hudson-rose/tmp/ROSESH-13-mysql-parallel-replay/rose-sh/workspace/mysql/phase_1/mysql-5.7.17/storage/perfschema/unittest)" &&
             directory="$(dirname "${filepath}")"
             # relative directory within the MySQL source tree
             relative_directory="${directory#${application_abs_srcdir}/}"
 
+            # output directory
+            output_filepath="$(echo "${rose_cmdline}" | sed 's/.* -o \(CMakeFiles\/.*\.o\)/\1 /' | awk '{print $1}')"
+            output_directory="$(dirname "${output_filepath}")"
+            output_relative_directory="${output_directory#${application_abs_srcdir}/}"
+
+            rose_output_filepath="${output_relative_directory}/rose_${basename}"
+
             # add to "make all" target
-            targets="${targets} ${relative_directory}/rose_${basename}"
+            targets="${targets} ${rose_output_filepath}"
 
             # make rose_<filename>.<extension>
             # Escape $ in makefiles: sed 's/[$]/$$/g'
             cat >> "${ROSE_MAKEFILE}" <<MAKEFILE
 
-${relative_directory}/rose_${basename}: ${filepath}
-$(echo -e "\t\$(VERBOSE)$(echo "${rose_cmdline}" | sed 's/[$]/$$/g')\n\n") \$(LOG_OUTPUT)
+${rose_output_filepath}: ${filepath}
+$(echo -e "\t\$(VERBOSE)$(echo "${rose_cmdline}" | sed 's/[$]/$$/g')\n\n") -rose:output ${rose_output_filepath} \$(LOG_OUTPUT)
 MAKEFILE
             #echo "${basename}:" >> "${ROSE_MAKEFILE}"
             #echo -e "\t$(echo "${rose_cmdline}" | sed 's/[$]/$$/g')\n\n" >> "${ROSE_MAKEFILE}"
