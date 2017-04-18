@@ -219,6 +219,7 @@ MAKEFILE
           
           # Variable to hold list of all make targets
           targets=""
+          source_files=""
           
           while read -r rose_cmdline || [[ -n "$line" ]]; do
             # -c <filepath>
@@ -241,6 +242,9 @@ MAKEFILE
             # add to "make all" target
             targets="${targets} ${rose_output_filepath}"
 
+            # add to list of source files
+            source_files="${source_files} ${filepath}"
+
             # make rose_<filename>.<extension>
             # Escape $ in makefiles: sed 's/[$]/$$/g'
             cat >> "${ROSE_MAKEFILE}" <<MAKEFILE
@@ -254,6 +258,15 @@ MAKEFILE
 
           # add all targets to default Make target "all"
           echo "all: ${targets}" >> "${ROSE_MAKEFILE}"
+
+          # Add target to count the lines of code for all targets
+          cat >> "${ROSE_MAKEFILE}" <<MAKEFILE
+
+# https://github.com/AlDanial/cloc
+cloc:
+$(echo -e "\t") git clone https://github.com/AlDanial/cloc.git
+$(echo -e "\t") cloc/cloc ${source_files}
+MAKEFILE
           
           make V=${VERBOSE} -j${parallelism} -f "${ROSE_MAKEFILE}" || fail "An error occurred during application compilation"
 
