@@ -468,6 +468,13 @@ function rose-sh-${application}-failures() {
 EOF
 )"
 
+  cmd__functions_for_replay_makefiles="$(cat <<EOF
+function rose-sh-${application}-make() {
+  make -f make-rose-commandlines.makefile \$*
+}
+EOF
+)"
+
   PS1="[rose-sh] " bash --init-file <(cat <<-EOF
 echo "==============================================================================="
 echo "=| Welcome to the rose-sh interactive terminal!"
@@ -476,6 +483,7 @@ echo "=| To exit, please press control-d"
 echo "==============================================================================="
   ${cmd__cd_into_app_srcdir}
   ${cmd__functions_for_sqlite3_results}
+  ${cmd__functions_for_replay_makefiles}
 EOF
   )
 
