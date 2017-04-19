@@ -10,7 +10,7 @@ download_rose_matrix_results()
   info "Downloading source code"
 
   set -x
-      clone_repository "${application}" "${application}-src" || "Unable to clone the ROSE source code"
+      git clone rose-dev@rosecompiler1.llnl.gov:rose/scratch/rose.git "${application}-src" || "Unable to clone the ROSE source code"
       cd "${application}-src/" || exit 1
       git submodule update --init || fail "Unable to clone the EDG source code"
       git checkout ${ROSE_COMMIT}
@@ -36,13 +36,22 @@ patch_rose_matrix_results()
 }
 
 #-------------------------------------------------------------------------------
+bootstrap_rose_matrix_results()
+#-------------------------------------------------------------------------------
+{
+  info "Bootstrapping autotools for ROSE compiler"
+  pushd "${application_abs_srcdir}"
+  ./build || fail "Unable to perform AUtotools bootstraping"
+}
+
+#-------------------------------------------------------------------------------
 configure_rose_matrix_results__rose()
 #-------------------------------------------------------------------------------
 {
   info "Configuring application for ROSE compiler='${ROSE_CC}'"
 
   #-----------------------------------------------------------------------------
-  set -x
+  set +x
   #-----------------------------------------------------------------------------
   # Setup toolchain before configuration
   source /usr/local/tools/dotkit/init.sh || true
@@ -50,10 +59,17 @@ configure_rose_matrix_results__rose()
   use mvapich2-intel-1.9 || fail "Unable to source Intel 16"
   source /g/g12/too1/opt/boost/1.52.0/gcc/4.8.5/setup.sh || fail "Unable to source Boost 1.52.0"
 
+  if ! test -f "${application_abs_srcdir}/configure"; then
+    bootstrap_rose_matrix_results
+  fi
+
   # Configure ROSE in a separate build directory
   export ROSE_COMPILATION="${application_abs_srcdir}/rose-compilation"
   export ROSE_INSTALLATION="${application_abs_srcdir}/rose-installation"
-  ../configure \
+
+  mkdir -p "${ROSE_COMPILATION}"
+  cd "${ROSE_COMPILATION}"
+  "${application_abs_srcdir}/configure" \
       --prefix="${ROSE_INSTALLATION}" \
       --enable-edg_version=4.12 \
       --without-java \
