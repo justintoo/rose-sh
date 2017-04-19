@@ -219,6 +219,7 @@ EOF
 pushd_workspace()
 #-------------------------------------------------------------------------------
 {
+  local application_workspace="$1"
   mkdir -p "${application_workspace}" || fail "workspace creation failed"
   pushd "${application_workspace}/"    || fail "changing into workspace failed"
 }
@@ -229,7 +230,7 @@ phase_1()
 {
   info "Performing Phase 1"
 
-  pushd_workspace
+  pushd_workspace "${application_workspace}"
       "install_deps_${application}"           || fail "phase_1::install_deps failed with status='$?'"
 
       "download_${application}"               || fail "phase_1::download failed with status='$?'"
@@ -400,7 +401,7 @@ export APPLICATION_SCRIPT="${APPLICATIONS_DIR}/${application}/${application}.sh"
 : ${application_workspace:="${workspace}/${application}"}
 : ${application_log:="${application_workspace}/output.txt-$(date +%Y%m%d-%H%M%S)-$$"}
 
-export application_abs_srcdir="${application_workspace}/phase_1/${application}-src"
+export application_abs_srcdir="${application_workspace}/${application}-src"
 
 #-------------------------------------------------------------------------------
 # Source default dependencies
@@ -438,9 +439,23 @@ if test -z "$(which "${ROSE_CXX}")"; then
 fi
 
 #-------------------------------------------------------------------------------
+# Workspace
+#-------------------------------------------------------------------------------
+# Build in a separate workspace, so we don't pollute the user's current directory.
+if [ "x${ROSE_SH_REUSE_WORKSPACE}" != "xtrue" ]; then
+    rm -rf "${application_workspace}"   || fail "main::remove_workspace failed"
+fi
+
+pushd_workspace "${application_workspace}"
+
+#-------------------------------------------------------------------------------
 # Interactive Shell (--shell)
 #-------------------------------------------------------------------------------
 if test "x${ROSESH_INTERACTIVE_SHELL}" = "xyes"; then
+  export -f fail
+  export -f info
+  export -f pushd_workspace
+
   #----------------------------------------------------------------------------
   # Change into application source directory
   #----------------------------------------------------------------------------
@@ -496,16 +511,6 @@ EOF
 
   exit $?
 fi
-
-#-------------------------------------------------------------------------------
-# Workspace
-#-------------------------------------------------------------------------------
-# Build in a separate workspace, so we don't pollute the user's current directory.
-if [ "x${ROSE_SH_REUSE_WORKSPACE}" != "xtrue" ]; then
-    rm -rf "${application_workspace}"   || fail "main::remove_workspace failed"
-fi
-mkdir -p "${application_workspace}" || fail "main::create_workspace failed"
-pushd "${application_workspace}" >/dev/null    || fail "main::cd_into_workspace failed"
 
 #-------------------------------------------------------------------------------
 # Entry point for program execution
