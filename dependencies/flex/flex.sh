@@ -38,7 +38,7 @@ install_flex()
       ./configure ${FLEX_CONFIGURE_OPTIONS}     || fail "Unable to configure application"
 
       make -j${parallelism}                     || fail "An error occurred during application compilation"
-      make -j${parallelism} install             || fail "An error occurred during application installation"
+      make -j1 install             || fail "An error occurred during application installation"
   else
       info "[SKIP] flex is already installed"
   fi

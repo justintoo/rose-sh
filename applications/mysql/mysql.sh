@@ -11,12 +11,12 @@ download_mysql()
   set -x
       #clone_repository "${application}" "${application}-src" || exit 1
       #cd "${application}-src/" || exit 1
+      #source /nfs/casc/overture/ROSE/opt/rhel7/x86_64/ncurses/6.0/setup.sh
 
-      source /nfs/casc/overture/ROSE/opt/rhel7/x86_64/ncurses/6.0/setup.sh
       wget https://dev.mysql.com/get/Downloads/MySQL-5.7/mysql-boost-5.7.17.tar.gz
       tar xzvf mysql-boost-5.7.17.tar.gz
       ln -sf mysql-5.7.17 mysql-src
-      cd mysql-5.7.17/
+      cd mysql-src
 
       wget http://sourceforge.net/projects/boost/files/boost/1.59.0/boost_1_59_0.tar.gz
       tar xzvf boost_1_59_0.tar.gz
@@ -101,8 +101,8 @@ compile_mysql()
           # guess it may not be necessary since all dependencies are already
           # available... I guess for now we'll play it safe
           # Must run with verbose mode to get *all* compile lines
-          #make -j$(cat /proc/cpuinfo | grep processor | wc -l) VERBOSE=1 2>&1 | tee output-mysql-make-gcc.txt || exit 1
-          make -j32 VERBOSE=1 2>&1 | tee output-mysql-make-gcc.txt || exit 1
+          make -j$(cat /proc/cpuinfo | grep processor | wc -l) VERBOSE=1 2>&1 | tee output-mysql-make-gcc.txt || exit 1
+#          make -j32 VERBOSE=1 2>&1 | tee output-mysql-make-gcc.txt || exit 1
           if [ "${PIPESTATUS[0]}" -ne 0 ]; then
             echo "[FATAL] GCC compilation failed. Terminating..."
             exit 1
@@ -131,24 +131,39 @@ compile_mysql()
           cat output-mysql-make-gcc.txt |    \
               grep --invert "\[.*%\]"    |    \
               grep --invert "^make "     |    \
+              grep --invert "^Building CXX object "     |    \
+              grep --invert "is newer than depender"     |    \
               grep "cc\|c++\|gcc\|g++"        \
           > gcc-commandlines.txt || exit 1
               #FORTRAN# grep "cc\|c++\|gcc\|g++\|gfortran" \
 
           # (3) Replace gcc compile lines with ${ROSE_CXX} variable
-          # WORKSPACE/rose-workspace/build to WORKSPACE/rose-workspace/sources
-          ROSE_WORKSPACE_ESCAPED="$(echo ${ROSE_WORKSPACE} | sed 's/\//\\\//g')"
+          #
+          # Building CXX object
+          # (1) Grep for only ROSE_CXX commandlines, else
+          #
+          #     $ cat make-rose-commandlines.txt  | grep "ROSE_CC\|ROSE_CXX"
+          #
+          # (2) Remove all extra commandlines
+          #
+          #     $ cat make-rose-commandlines.txt  | grep --invert "ROSE_CC" | grep --invert "ROSE_CXX" | grep --invert "^Building CXX object " | grep --invert c++ | grep --invert "\/usr\/bin\/ar" | grep --invert "Built target" | grep --invert "^Building C object " | grep --invert "libprotobuf WARNING" | grep --invert "/usr/bin/cc" | grep --invert "cmake_depends" | grep --invert "^Dependee " | grep --invert "Scanning dependencies of " | grep --invert "Linking CXX executable" | grep --invert "/usr/bin/cmake"
+
+          # Reorder so `mkdir` comes after `cd`:
+          # sed 's/^\(mkdir.*\); \(cd .*\) && \(.*\)/\2 \&\& \1 \&\& \3/' \
+
           cat gcc-commandlines.txt                                  | \
               sed 's/\(&&\) .*c++ /\1 \${ROSE_CXX} /'      | \
               sed 's/\(&&\) .*g++ /\1 \${ROSE_CXX} /'      | \
               sed 's/\(&&\) .*cc /\1 \${ROSE_CC} /'        | \
               sed 's/\(&&\) .*gcc /\1 \${ROSE_CC} /'       | \
               sed 's/^cd \(.*\) \(&& .*\)/cd "\$(dirname \1)" \2/' | \
-              sed 's/^\(.* -o\) \(CMakeFiles\/.*\.o\) \(.*\)/mkdir -p "\$(dirname \2)"; \1 \2 \3/' \
+              sed 's/^\(.* -o\) \(CMakeFiles\/.*\.o\) \(.*\)/mkdir -p "\$(dirname \2)"; \1 \2 \3/' | \
+              grep "ROSE_CC\|ROSE_CXX" | \
+              sed 's/^\(mkdir.*\); \(cd .*\) && \(.*\)/\2 \&\& \1 \&\& \3/' \
           > make-rose-commandlines.txt
               #FORTRAN#sed 's/\(&&\) .*gfortran/\1 \${ROSE_GFORTRAN}/'      | \
 
-          cat <<EOF | cat - make-rose-commandlines.txt | sed 's/\(^\${ROSE_CXX}.*\)$/\1 || true/g' > make-rose.sh
+          cat <<EOF | cat - make-rose-commandlines.txt | sed 's/\(^\${ROSE_CXX}.*\)$/\1 || true/g' > make-rose-sequential.sh
 #!/bin/bash
 
 export application_abs_srcdir="${application_abs_srcdir}"
@@ -170,8 +185,90 @@ else
 fi
 EOF
 
-          chmod +x make-rose.sh
-          time ./make-rose${ROSE_DEBUG:+-debug}.sh || exit 1
+          # TOO1 (04/11/17): Run sequential commandlines
+          #chmod +x make-rose-sequential.sh
+          #time ./make-rose${ROSE_DEBUG:+-debug}.sh || exit 1
+
+          # Sort by last column, which should be the MySQL input filename
+          # (http://stackoverflow.com/questions/1915636/is-there-a-way-to-uniq-by-column)
+          cat make-rose-commandlines.txt | awk -F" " '!_[$NF]++' > make-rose-commandlines-unique.txt
+
+          # Generate a Makefile of all the commandlines in order to:
+          #
+          #   1. Conveniently re-run the command manually with make 
+          #   2. Run in parallel with `make -jN`
+
+          # Create the Makefile header
+          ROSE_MAKEFILE="make-rose-commandlines.makefile"
+          cat > "${ROSE_MAKEFILE}" <<MAKEFILE
+V = 0
+V_0 = @echo "Compiling \$@";
+V_1 =
+VERBOSE = \$(V_\$(V))
+
+LOG_OUTPUT_0 = 1>/dev/null
+LOG_OUTPUT_1 =
+LOG_OUTPUT = \$(LOG_OUTPUT_\$(V))
+
+default: all
+
+# http://stackoverflow.com/questions/4219255/how-do-you-get-the-list-of-targets-in-a-makefile
+print-all-targets:
+$(echo -e "\t")@\$(MAKE) -pRrq -f \$(lastword \$(MAKEFILE_LIST)) : 2>/dev/null | awk -v RS= -F: '/^# File/,/^# Finished Make data base/ {if (\$\$1 !~ "^[#.]") {print \$\$1}}' | sort | egrep -v -e '^[^[:alnum:]]' -e '^\$@\$\$' | xargs
+MAKEFILE
+          
+          # Variable to hold list of all make targets
+          targets=""
+          source_files=""
+          
+          while read -r rose_cmdline || [[ -n "$line" ]]; do
+            # -c <filepath>
+            filepath="$(echo "${rose_cmdline}" | sed 's/.* -c \(.*\)$/\1/')"
+            basename="$(basename "${filepath}")"
+            extension="${basename##*.}"
+            filename="${basename%.*}"
+
+            directory="$(dirname "${filepath}")"
+            # relative directory within the MySQL source tree
+            relative_directory="${directory#${application_abs_srcdir}/}"
+
+            # output directory
+            output_filepath="$(echo "${rose_cmdline}" | sed 's/.* -o \(CMakeFiles\/.*\.o\)/\1 /' | awk '{print $1}')"
+            output_directory="$(dirname "${output_filepath}")"
+            output_relative_directory="${output_directory#${application_abs_srcdir}/}"
+
+            rose_output_filepath="${output_relative_directory}/rose_${basename}"
+
+            # add to "make all" target
+            targets="${targets} ${rose_output_filepath}"
+
+            # add to list of source files
+            source_files="${source_files} ${filepath}"
+
+            # make rose_<filename>.<extension>
+            # Escape $ in makefiles: sed 's/[$]/$$/g'
+            cat >> "${ROSE_MAKEFILE}" <<MAKEFILE
+
+${rose_output_filepath}: ${filepath}
+$(echo -e "\t\$(VERBOSE)$(echo "${rose_cmdline}" | sed 's/[$]/$$/g')\n\n") -rose:output ${rose_output_filepath} \$(LOG_OUTPUT)
+MAKEFILE
+            #echo "${basename}:" >> "${ROSE_MAKEFILE}"
+            #echo -e "\t$(echo "${rose_cmdline}" | sed 's/[$]/$$/g')\n\n" >> "${ROSE_MAKEFILE}"
+          done < "make-rose-commandlines-unique.txt"
+
+          # add all targets to default Make target "all"
+          echo "all: ${targets}" >> "${ROSE_MAKEFILE}"
+
+          # Add target to count the lines of code for all targets
+          cat >> "${ROSE_MAKEFILE}" <<MAKEFILE
+
+# https://github.com/AlDanial/cloc
+cloc:
+$(echo -e "\t") git clone https://github.com/AlDanial/cloc.git
+$(echo -e "\t") cloc/cloc ${source_files}
+MAKEFILE
+          
+          make V=${VERBOSE} -j${parallelism} -f "${ROSE_MAKEFILE}" || fail "An error occurred during application compilation"
 
 # Extract results from Sqlite database and save to files:
 #
