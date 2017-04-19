@@ -216,13 +216,20 @@ EOF
 }
 
 #-------------------------------------------------------------------------------
+pushd_workspace()
+#-------------------------------------------------------------------------------
+{
+  mkdir -p "${application_workspace}" || fail "workspace creation failed"
+  pushd "${application_workspace}/"    || fail "changing into workspace failed"
+}
+
+#-------------------------------------------------------------------------------
 phase_1()
 #-------------------------------------------------------------------------------
 {
   info "Performing Phase 1"
 
-  mkdir -p "${application_workspace}/phase_1" || fail "phase_1::create_workspace failed"
-  pushd "${application_workspace}/phase_1"    || fail "phase_1::cd_into_workspace failed"
+  pushd_workspace
       "install_deps_${application}"           || fail "phase_1::install_deps failed with status='$?'"
 
       "download_${application}"               || fail "phase_1::download failed with status='$?'"
