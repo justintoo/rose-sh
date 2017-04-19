@@ -100,7 +100,13 @@ compile_rose_matrix_results()
   #-----------------------------------------------------------------------------
   set -x
   #-----------------------------------------------------------------------------
-  srun -ppdebug make -j${parallelism} || fail "An error occurred during application installation"
+  srun -ppdebug make -j${parallelism} -C src || fail "An error occurred during application installation"
+  srun -ppdebug make -j${parallelism} -C tests || fail "An error occurred during application installation"
+  srun -ppdebug make -j${parallelism} -C tests check || fail "An error occurred during application installation"
+# TODO: Add projects
+
+  srun -ppdebug make -j${parallelism} -C tutorial || fail "An error occurred during application installation"
+  srun -ppdebug make -j${parallelism} install-rose-library || fail "An error occurred during application installation"
   #-----------------------------------------------------------------------------
   set +x
   #-----------------------------------------------------------------------------
