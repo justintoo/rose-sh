@@ -513,6 +513,16 @@ EOF
 fi
 
 #-------------------------------------------------------------------------------
+# Workspace
+#-------------------------------------------------------------------------------
+# Build in a separate workspace, so we don't pollute the user's current directory.
+if [ "x${ROSE_SH_REUSE_WORKSPACE}" != "xtrue" ]; then
+    rm -rf "${application_workspace}"   || fail "main::remove_workspace failed"
+fi
+mkdir -p "${application_workspace}" || fail "main::create_workspace failed"
+pushd "${application_workspace}" >/dev/null    || fail "main::cd_into_workspace failed"
+
+#-------------------------------------------------------------------------------
 # Entry point for program execution
 #-------------------------------------------------------------------------------
 (
