@@ -21,6 +21,19 @@ source /nfs/casc/overture/ROSE/opt/rhel6/x86_64/sqlite/308002/gcc/4.4.5/setup.sh
 : ${parallelism:=$(cat /proc/cpuinfo | grep processor | wc -l)}
 : ${VERBOSE:=1}
 : ${TMPDIR:=/tmp}
+: ${ROSESH_INTERACTIVE_SHELL:=no}
+
+export ROSE_CC
+export ROSE_CXX
+export ROSE_GFORTRAN
+export CC
+export CXX
+export GFORTRAN
+export JAVAC
+export parallelism
+export VERBOSE
+export TMPDIR
+export ROSESH_INTERACTIVE_SHELL
 
 #-------------------------------------------------------------------------------
 export APPLICATIONS_DIR="${ROSE_SH_HOME}/applications"
@@ -152,7 +165,7 @@ download_tarball()
 
     info "Attempting tarball download: '${tarball_url}'"
 
-    curl -O -C - "${tarball_url}"
+    curl --location -O -C - "${tarball_url}"
     if test $? -eq 0; then
         return 0
     else
@@ -222,15 +235,21 @@ EOF
 }
 
 #-------------------------------------------------------------------------------
+pushd_workspace()
+#-------------------------------------------------------------------------------
+{
+  local application_workspace="$1"
+  mkdir -p "${application_workspace}" || fail "workspace creation failed"
+  pushd "${application_workspace}/"    || fail "changing into workspace failed"
+}
+
+#-------------------------------------------------------------------------------
 phase_1()
 #-------------------------------------------------------------------------------
 {
   info "Performing Phase 1"
 
-  export application_abs_srcdir="${application_workspace}/phase_1/${application}-src"
-
-  mkdir -p "${application_workspace}/phase_1" || fail "phase_1::create_workspace failed"
-  pushd "${application_workspace}/phase_1"    || fail "phase_1::cd_into_workspace failed"
+  pushd_workspace "${application_workspace}"
       "install_deps_${application}"           || fail "phase_1::install_deps failed with status='$?'"
 
       "download_${application}"               || fail "phase_1::download failed with status='$?'"
@@ -348,11 +367,15 @@ for arg in $*; do
     --keep-going)
         export ROSE_CC="$(which keep-going.py) --tool=${ROSE_CC}"
         export ROSE_CXX="$(which keep-going.py) --tool=${ROSE_CXX}"
-        export ROSE_GFORTRAN="$(which keep-going.py)"
+        export ROSE_GFORTRAN="$(which keep-going.py --tool=${ROSE_GFORTRAN})"
         shift;;
     #--keep-going)   export ROSE_CC="$(which KeepGoingTranslator.py)"; shift;;
     --disable-configure-step)   export ROSE_SH_ENABLE_CONFIGURE="false"; shift;;
     --clobber)      export ROSE_SH_CLOBBER_MODE="-rose:unparser:clobber_input_file"; shift;;
+    --shell)
+        export ROSESH_INTERACTIVE_SHELL=yes
+        continue
+        ;;
     --install-dependency)
         export ROSE_SH__ACTION__INSTALL_DEPENDENCY="true"
         shift
@@ -391,23 +414,116 @@ export ANT_HOME="${ROSE_SH_DEPS_PREFIX}"
 # TOO1 (2/11/2014): Required for proper use of ROSE_SH/dependencies/installation/bin/mvn.
 export M2_HOME="${ROSE_SH_DEPS_PREFIX}"
 
+#-------------------------------------------------------------------------------
+# Application
+#-------------------------------------------------------------------------------
 export APPLICATION_SCRIPT="${APPLICATIONS_DIR}/${application}/${application}.sh"
 export APPLICATION_SCRIPT_DIR="${APPLICATIONS_DIR}/${application}"
 : ${application_workspace:="${workspace}/${application}"}
 : ${application_log:="${application_workspace}/output.txt-$(date +%Y%m%d-%H%M%S)-$$"}
 
-# Build in a separate workspace, so we don't pollute the user's current directory.
-if [ "x${ROSE_SH_REUSE_WORKSPACE}" != "xtrue" ]; then
-    rm -rf "${application_workspace}"   || fail "main::remove_workspace failed"
-fi
-mkdir -p "${application_workspace}" || fail "main::create_workspace failed"
-pushd "${application_workspace}"    || fail "main::cd_into_workspace failed"
+export application_abs_srcdir="${application_workspace}/${application}-src"
 
 if [ "x${ROSE_SH__ACTION__INSTALL_DEPENDENCY}" = "xtrue" ]; then
   install_deps "${application}" || fail "Could not install dependency '$1'"
   echo "Successfully installed dependency '$1'"
   exit 0
 fi
+
+#-------------------------------------------------------------------------------
+# Sanity Checks
+#-------------------------------------------------------------------------------
+if test -z "$(which "${ROSE_CC}")"; then
+  fail "\$ROSE_CC does not exist"
+fi
+
+if test -z "$(which "${ROSE_CXX}")"; then
+  fail "\$ROSE_CXX does not exist"
+fi
+
+#-------------------------------------------------------------------------------
+# Workspace
+#-------------------------------------------------------------------------------
+# Build in a separate workspace, so we don't pollute the user's current directory.
+if [ "x${ROSE_SH_REUSE_WORKSPACE}" != "xtrue" ]; then
+    rm -rf "${application_workspace}"   || fail "main::remove_workspace failed"
+fi
+
+pushd_workspace "${application_workspace}"
+
+#-------------------------------------------------------------------------------
+# Interactive Shell (--shell)
+#-------------------------------------------------------------------------------
+if test "x${ROSESH_INTERACTIVE_SHELL}" = "xyes"; then
+  export -f fail
+  export -f info
+  export -f pushd_workspace
+
+  #----------------------------------------------------------------------------
+  # Change into application source directory
+  #----------------------------------------------------------------------------
+  if test -n "${application}"; then
+    cmd__cd_into_app_srcdir="$(cat <<EOF
+cd ${application_abs_srcdir};
+echo "Current directory for ${application}: \$(pwd)"
+echo "==============================================================================="
+export PS1="\${PS1}[${application}] "
+EOF
+)"
+  fi
+
+  #----------------------------------------------------------------------------
+  # Change into application source directory
+  #----------------------------------------------------------------------------
+  cmd__functions_for_sqlite3_results="$(cat <<EOF
+rose_sh_${application}_database="${application_abs_srcdir}/rose-results.db"
+
+function rose-sh-${application}-results() {
+  sqlite3 \${rose_sh_${application}_database} '.schema';
+  sqlite3 \${rose_sh_${application}_database};
+}
+
+function rose-sh-${application}-passes() {
+  sqlite3 \${rose_sh_${application}_database} 'select count(*) from results where passed=1;'
+}
+
+function rose-sh-${application}-failures() {
+  sqlite3 \${rose_sh_${application}_database} 'select count(*) from results where passed=0;'
+}
+EOF
+)"
+
+  cmd__functions_for_replay_makefiles="$(cat <<EOF
+function rose-sh-${application}-make() {
+  make -f make-rose-commandlines.makefile \$*
+}
+EOF
+)"
+
+  PS1="[rose-sh] " bash --init-file <(cat <<-EOF
+echo "==============================================================================="
+echo "=| Welcome to the rose-sh interactive terminal!"
+echo "=|"
+echo "=| To exit, please press control-d"
+echo "==============================================================================="
+  ${cmd__cd_into_app_srcdir}
+  ${cmd__functions_for_sqlite3_results}
+  ${cmd__functions_for_replay_makefiles}
+EOF
+  )
+
+  exit $?
+fi
+
+#-------------------------------------------------------------------------------
+# Workspace
+#-------------------------------------------------------------------------------
+# Build in a separate workspace, so we don't pollute the user's current directory.
+if [ "x${ROSE_SH_REUSE_WORKSPACE}" != "xtrue" ]; then
+    rm -rf "${application_workspace}"   || fail "main::remove_workspace failed"
+fi
+mkdir -p "${application_workspace}" || fail "main::create_workspace failed"
+pushd "${application_workspace}" >/dev/null    || fail "main::cd_into_workspace failed"
 
 #-------------------------------------------------------------------------------
 # Entry point for program execution

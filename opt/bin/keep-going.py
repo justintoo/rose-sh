@@ -23,15 +23,27 @@ cwd             = os.getcwd()
 #------------------------------------------------------------------------------
 def db__save_file_status(filename, directory, passed, commandline):
   print >> sys.stdout, "\n[INFO] Saving to database %s: '%s', '%s', '%d', '%s'" % (rose_database, filename, directory, passed, commandline)
-  conn = sqlite3.connect(rose_database)
-  c = conn.cursor()
 
-  c.execute('''CREATE TABLE IF NOT EXISTS results
-               (filename text, directory text, passed BOOLEAN, commandline text)''')
+  timeout = 10000
 
-  c.execute("INSERT INTO results VALUES (?, ?, ?, ?)", (filename, directory, passed, commandline))
-  conn.commit()
-  conn.close()
+  connection = sqlite3.connect(rose_database)
+  c = connection.cursor()
+
+  for x in range(0, timeout):
+    try:
+      with connection:
+        c.execute('''CREATE TABLE IF NOT EXISTS results
+                     (filename text, directory text, passed BOOLEAN, commandline text)''')
+        c.execute("INSERT INTO results VALUES (?, ?, ?, ?)", (filename, directory, passed, commandline))
+        break
+    except:
+      time.sleep(1)
+      pass
+    finally:
+      break
+
+  connection.commit()
+  connection.close()
 
 #------------------------------------------------------------------------------
 # CLI
@@ -59,8 +71,8 @@ def IsHeader(arg):
   if arg.endswith('.h'):
       return arg
 
-cc = os.environ.get('SYSTEM_CC')
-cxx = os.environ.get('SYSTEM_CXX')
+cc = os.environ.get('SYSTEM_CC') or "gcc"
+cxx = os.environ.get('SYSTEM_CXX') or "g++"
 flags = os.environ.get('ROSESH_FLAGS') or ""
 
 print >> sys.stdout, "[INFO] SYSTEM_CC=%s" % (cc)

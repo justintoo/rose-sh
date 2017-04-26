@@ -1,7 +1,7 @@
 rose-sh
 =======
 
-A testing harness to compile applications from out in the wild with the ROSE compiler, [http://rosecompiler.org/](http://rosecompiler.org/).
+A shell framework to compile applications from out in the wild with the ROSE compiler, [http://rosecompiler.org/](http://rosecompiler.org/).
 
 Usage
 =====
