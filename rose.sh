@@ -33,6 +33,7 @@ export APPLICATIONS_LIST="$(ls ${APPLICATIONS_DIR}/ | xargs -I{} basename {} | s
 #-------------------------------------------------------------------------------
 : ${REPOSITORY_MIRROR_URLS:=
   https://bitbucket.org/rose-compiler
+  https://bitbucket.org/rose-sh
   rose-dev@rosecompiler1.llnl.gov:rose/c
   rose-dev@rosecompiler1.llnl.gov:rose/cxx
   rose-dev@rosecompiler1.llnl.gov:3rdparty/c
@@ -74,6 +75,24 @@ install_deps() # $*=dependencies
     return 0
   else
     for dep in ${DEPENDENCIES}; do
+      #-------------------------------------------------------------------------------
+      # Source default dependencies
+      #-------------------------------------------------------------------------------
+      # custom > default
+      for dependency in $DEPENDENCIES; do
+          script_default="${DEPENDENCIES_DIR__DEFAULT}/${dependency}/${dependency}.sh"
+          script_custom="${DEPENDENCIES_DIR__CUSTOM}/${dependency}/${dependency}.sh"
+          if [ -f "${script_custom}" ]; then
+              info "\$ source ${script_custom}" || exit 1
+              source "${script_custom}" || exit 1
+          elif [ -f "${script_default}" ]; then
+              info "\$ source ${script_default}" || exit 1
+              source "${script_default}" || exit 1
+          else
+              fail "Dependency does not exist: '${dependency}'"
+          fi
+      done
+
       (
 
             install_${dep} || exit 1
@@ -286,7 +305,7 @@ main()
         fail "Application script does not exist: '${APPLICATION_SCRIPT}'"
     else
         info "Sourcing application script '${APPLICATION_SCRIPT}'"
-        source "${APPLICATION_SCRIPT}" || exit 1
+        source "${APPLICATION_SCRIPT}" || fail "Failed to source '${script}'"
     fi
 
       (
@@ -324,10 +343,11 @@ for arg in $*; do
     help)           usage; shift; exit 0;;
     --help)         usage; shift; exit 0;;
     -h)             usage; shift; exit 0;;
+    --shell)        bash --rcfile <(cat ~/.bashrc; echo 'PS1="rose-sh> "'); shift; exit 0;;
     --serial)       export parallelism="1"; shift;;
     --keep-going)
-        export ROSE_CC="$(which keep-going.py)"
-        export ROSE_CXX="$(which keep-going.py)"
+        export ROSE_CC="$(which keep-going.py) --tool=${ROSE_CC}"
+        export ROSE_CXX="$(which keep-going.py) --tool=${ROSE_CXX}"
         export ROSE_GFORTRAN="$(which keep-going.py)"
         shift;;
     #--keep-going)   export ROSE_CC="$(which KeepGoingTranslator.py)"; shift;;
@@ -372,6 +392,7 @@ export ANT_HOME="${ROSE_SH_DEPS_PREFIX}"
 export M2_HOME="${ROSE_SH_DEPS_PREFIX}"
 
 export APPLICATION_SCRIPT="${APPLICATIONS_DIR}/${application}/${application}.sh"
+export APPLICATION_SCRIPT_DIR="${APPLICATIONS_DIR}/${application}"
 : ${application_workspace:="${workspace}/${application}"}
 : ${application_log:="${application_workspace}/output.txt-$(date +%Y%m%d-%H%M%S)-$$"}
 
@@ -381,24 +402,6 @@ if [ "x${ROSE_SH_REUSE_WORKSPACE}" != "xtrue" ]; then
 fi
 mkdir -p "${application_workspace}" || fail "main::create_workspace failed"
 pushd "${application_workspace}"    || fail "main::cd_into_workspace failed"
-
-#-------------------------------------------------------------------------------
-# Source default dependencies
-#-------------------------------------------------------------------------------
-for dependency in $DEPENDENCIES_LIST__DEFAULT; do
-    #info "Sourcing default dependency script '${dependency}'"
-    source "${dependency}" || exit 1
-done
-
-#-------------------------------------------------------------------------------
-# Source custom dependencies (overrides defaults)
-#-------------------------------------------------------------------------------
-if [ -n "${DEPENDENCIES_LIST__CUSTOM}" ]; then
-    for dependency in $DEPENDENCIES_LIST__CUSTOM; do
-        #info "Sourcing custom dependency script '${dependency}'"
-        source "${dependency}" || exit 1
-    done
-fi
 
 if [ "x${ROSE_SH__ACTION__INSTALL_DEPENDENCY}" = "xtrue" ]; then
   install_deps "${application}" || fail "Could not install dependency '$1'"

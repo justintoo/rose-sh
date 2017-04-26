@@ -1,5 +1,6 @@
 : ${TRUECRYPT_DEPENDENCIES:=nasm}
-# libfuse requires root permission to install
+#: ${TRUECRYPT_DEPENDENCIES:=nasm wxwidgets}
+# libfuse requires root permission to install: /bin/install: cannot remove ‘/sbin/mount.fuse’: Permission denied
 : ${TRUECRYPT_CONFIGURE_OPTIONS:=
   }
 
@@ -66,14 +67,17 @@ compile_truecrypt()
   #-----------------------------------------------------------------------------
   set -x
   #-----------------------------------------------------------------------------
+    wget "http://prdownloads.sourceforge.net/wxwindows/wxWidgets-2.8.12.tar.gz" || fail "Unable to download wxWidgets"
+    tar xzvf wxWidgets-2.8.12.tar.gz
+    make WX_ROOT="$(pwd)/wxWidgets-2.8.12" wxbuild || fail "An error occurred while building wxWidgets"
+
     # trying to find fuse.h
-    CFLAGS="-I${ROSE_SH_DEPS_PREFIX}/workspace/libfuse/libfuse/include" \
-    CXXFLAGS="-I${ROSE_SH_DEPS_PREFIX}/workspace/libfuse/libfuse/include" \
-    CPPFLAGS="-I${ROSE_SH_DEPS_PREFIX}/workspace/libfuse/libfuse/include" \
+    SYSTEM_CC="${CC}" \
+    SYSTEM_CXX="${CXX}" \
     CC="${ROSE_CC}" \
     CXX="${ROSE_CXX}" \
     PKCS11_INC="$(pwd)/PKCS-Headers" \
-      make -j --keep-going V=1 WXSTATIC=1 || fail "An error occurred during application configuration"
+      /usr/bin/time --format=%E make --keep-going -j${parallelism} VERBOSE=1 WXSTATIC=1 || fail "An error occurred while building TrueCrypt"
   #-----------------------------------------------------------------------------
   set +x
   #-----------------------------------------------------------------------------

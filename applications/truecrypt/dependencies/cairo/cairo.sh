@@ -1,4 +1,4 @@
-: ${CAIRO_DEPENDENCIES:=x11_r682 glib libxcb fontconfig freetype25 zlib libpixman libpng}
+: ${CAIRO_DEPENDENCIES:=glib libxcb fontconfig freetype25 zlib libpixman libpng xorg_libxext}
 # TOO1 (2/10/2014): RHEL6: Disable util/cairo-trace (--disable-trace) due to this error:
 #
 #    lib64/libiberty.a(cplus-dem.o): relocation R_X86_64_32S against `_sch_istable' can not be used when making a shared object; recompile with -fPIC
@@ -18,8 +18,11 @@
     --with-x
     --enable-xcb-shm=no
     --disable-trace
+    --x-libraries="${ROSE_SH_DEPS_PREFIX}/lib"
+    --x-includes="${ROSE_SH_DEPS_PREFIX}/include"
   }
-: ${CAIRO_TARBALL:="cairo-1.12.16.tar.xz"}
+#: ${CAIRO_TARBALL:="cairo-1.12.16.tar.xz"}
+: ${CAIRO_TARBALL:="cairo-1.14.8.tar.xz"}
 : ${CAIRO_INSTALLED_FILE:="${ROSE_SH_DEPS_PREFIX}/include/cairo/cairo.h"}
 
 #-------------------------------------------------------------------------------
@@ -52,9 +55,13 @@ install_cairo()
       tar xvf "${CAIRO_TARBALL%.xz}"            || fail "Unable to unpack application tarball"
       cd "$(basename ${CAIRO_TARBALL%.tar.xz})" || fail "Unable to change into application source directory"
 
+#ACLOCAL_PATH="${ROSE_SH_DEPS_PREFIX}/share/aclocal:${ACLOCAL_PATH}" \
+#          ./autogen.sh                                          || fail "Unable to bootstrap application"
+
       PKG_CONFIG_PATH="${FREETYPE25_PREFIX}/lib/pkgconfig:${PKG_CONFIG_PATH}"
       CFLAGS="-Wl,--no-as-needed -fPIC" \
       CXXFLAGS="-Wl,--no-as-needed -fPIC" \
+      LDFLAGS="-lXext -lxcb" \
           ./configure ${CAIRO_CONFIGURE_OPTIONS} || fail "Unable to configure application"
 
       make -j${parallelism}         || fail "An error occurred during application compilation"

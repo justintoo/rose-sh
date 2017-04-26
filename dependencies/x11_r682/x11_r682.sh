@@ -1,6 +1,6 @@
 # http://xorg.freedesktop.org/releases/X11R6.8.2/
 
-: ${x11_r682_DEPENDENCIES:=fontconfig freetype21}
+: ${x11_r682_DEPENDENCIES:=fontconfig freetype21 flex}
 : ${x11_r682_CONFIGURE_OPTIONS:=
     --prefix="${ROSE_SH_DEPS_PREFIX}"
     --libdir="${ROSE_SH_DEPS_LIBDIR}"
@@ -41,16 +41,21 @@ install_x11_r682()
       sed -i".bak" '41d' "extras/drm/shared/drm.h"  || fail "Unable to remove '#include <linux/config.h>' while patching drm.h"
       sed -i".bak" 's/programs//' "Imakefile"       || fail "Unable to remove programs from SUBDIRS"
 
+      EXTRA_DEFINES="-I${ROSE_SH_DEPS_PREFIX}/include -I${ROSE_SH_DEPS_PREFIX}/workspace/x11_r682/xc/lib -I${ROSE_SH_DEPS_PREFIX}/workspace/x11_r682/xc/programs/Xserver/hw/xfree86/os-support -I${ROSE_SH_DEPS_PREFIX}/workspace/x11_r682/xc/programs/Xserver/hw/xfree86/common -I${ROSE_SH_DEPS_PREFIX}/workspace/x11_r682/xc/programs/Xserver/hw/xfree86"
+
+      # TOO1 (3/15/2017): XDPSshare.c requires DPS/dpsops.h
+      ln -s "${ROSE_SH_DEPS_PREFIX}/workspace/x11_r682/xc/lib/dps" "${ROSE_SH_DEPS_PREFIX}/workspace/x11_r682/xc/lib/DPS" || fail "Unable to symlink dps as DPS"
+
       LDFLAGS="$LDFLAGS" \
       CPPFLAGS="$CPPFLAGS" \
       CFLAGS="$CFLAGS" \
-      EXTRA_DEFINES="-I${ROSE_SH_DEPS_PREFIX}/include" \
-          make World || true
+      EXTRA_DEFINES="${EXTRA_DEFINES}" \
+          make World -j${parallelism} --keep-going || true
 
       # lib/GL/mesa/drivers/dri/common/xmlconfig.o requires expat.h
       make -C lib/GL/mesa/drivers/dri/common \
-        -j${parallelism} \
-        EXTRA_INCLUDES="-I${ROSE_SH_DEPS_PREFIX}/include" || fail "An error occurred during compilation of lib/GL/mesa/drivers/dri/common"
+        -j${parallelism} --keep-going \
+        EXTRA_INCLUDES="-I${ROSE_SH_DEPS_PREFIX}/include -I${ROSE_SH_DEPS_PREFIX}/workspace/x11_r682/xc/lib" || fail "An error occurred during compilation of lib/GL/mesa/drivers/dri/common"
 
 
 # TOO1 (2/24/2014):
@@ -69,12 +74,14 @@ install_x11_r682()
       LDFLAGS="$LDFLAGS" \
       CPPFLAGS="$CPPFLAGS" \
       CFLAGS="$CFLAGS" \
-      EXTRA_DEFINES="-I${ROSE_SH_DEPS_PREFIX}/include" \
+      EXTRA_DEFINES="${EXTRA_DEFINES}" \
       INSTALLED_LIBS="-L${ROSE_SH_DEPS_PREFIX}/lib" \
-          make -j${parallelism} \
+          make -j${parallelism} --keep-going \
               FONTCONFIGBUILDDIR="" \
               FREETYPE2INCDIR="${FREETYPE21_PREFIX}/include" \
               || fail "An error occurred during application compilation"
+
+      make DESTDIR="${ROSE_SH_DEPS_PREFIX}" -j --keep-going
   else
       info "[SKIP] x11_r682 is already installed"
   fi
