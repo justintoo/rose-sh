@@ -1,0 +1,206 @@
+#!/usr/bin/env python
+
+from __future__ import print_function
+
+#------------------------------------------------------------------------------
+# Python 2.6+ Required
+#------------------------------------------------------------------------------
+import sys
+if sys.version_info[:2] < (2, 6):
+    v_info = sys.version_info[:3]
+    sys.exit("ROSE-SH requires Python 2.6 or higher."
+             "This is Python %d.%d.%d." % v_info)
+
+import os
+import inspect
+
+#------------------------------------------------------------------------------
+# ROSESH Prefix
+#------------------------------------------------------------------------------
+ROSESH_FILE = os.path.realpath(os.path.expanduser(__file__))
+os.environ["ROSESH_FILE"] = ROSESH_FILE
+ROSESH_PREFIX = os.path.dirname(os.path.dirname(ROSESH_FILE))
+
+#------------------------------------------------------------------------------
+# ROSESH/lib
+#------------------------------------------------------------------------------
+ROSESH_LIB_PATH = os.path.join(ROSESH_PREFIX, "lib", "rosesh")
+sys.path.insert(0, ROSESH_LIB_PATH)
+
+# Add external libs
+ROSESH_EXTERNAL_LIBS_PATH = os.path.join(ROSESH_PREFIX, "lib", "external")
+sys.path.insert(0, ROSESH_EXTERNAL_LIBS_PATH)
+
+#------------------------------------------------------------------------------
+# ROSESH/lib/external/spack/lib
+#------------------------------------------------------------------------------
+SPACK_LIBS_PATH = os.path.join(ROSESH_EXTERNAL_LIBS_PATH, "spack", "lib", "spack")
+sys.path.insert(0, SPACK_LIBS_PATH)
+
+SPACK_EXTERNAL_LIBS_PATH = os.path.join(SPACK_LIBS_PATH, "external")
+sys.path.insert(0, SPACK_EXTERNAL_LIBS_PATH)
+
+SPACK_YAML_LIBS_PATH = os.path.join(SPACK_EXTERNAL_LIBS_PATH, "yaml", "lib")
+sys.path.insert(0, SPACK_YAML_LIBS_PATH)
+
+#------------------------------------------------------------------------------
+# If there is no working directory, use the rose-sh prefix.
+#------------------------------------------------------------------------------
+try:
+    working_dir = os.getcwd()
+except OSError:
+    os.chdir(ROSESH_PREFIX)
+    working_dir = ROSESH_PREFIX
+
+# clean up the scope and start using rose-sh package instead.
+del ROSESH_FILE, ROSESH_PREFIX, ROSESH_LIB_PATH
+import llnl.util.tty as tty
+from llnl.util.tty.color import *
+import rosesh
+from rosesh.error import RoseShError
+import argparse
+import pstats
+
+# Command parsing
+parser = argparse.ArgumentParser(
+    formatter_class=argparse.RawTextHelpFormatter,
+    description="ROSE-SH: The ROSE Compiler Infrastructure Shell.")
+
+parser.add_argument('-d', '--debug', action='store_true',
+                    help="write out debug logs during compile")
+parser.add_argument('-D', '--pdb', action='store_true',
+                    help="run rosesh under the pdb debugger")
+parser.add_argument('-k', '--insecure', action='store_true',
+                    help="do not check ssl certificates when downloading")
+parser.add_argument('-m', '--mock', action='store_true',
+                    help="use mock packages instead of real ones")
+parser.add_argument('-p', '--profile', action='store_true',
+                    help="profile execution using cProfile")
+parser.add_argument('--lines', default=20, action='store',
+                    help="lines of profile output: default 20; 'all' for all")
+parser.add_argument('-v', '--verbose', action='store_true',
+                    help="print additional output during builds")
+parser.add_argument('-s', '--stacktrace', action='store_true',
+                    help="add stacktrace info to all printed statements")
+parser.add_argument('-V', '--version', action='version',
+                    version="%s" % rosesh.rosesh_version)
+
+# each command module implements a parser() function, to which we pass its
+# subparser for setup.
+subparsers = parser.add_subparsers(metavar='SUBCOMMAND', dest="command")
+
+import rosesh.cmd
+for cmd in rosesh.cmd.commands:
+    module = rosesh.cmd.get_module(cmd)
+    cmd_name = cmd.replace('_', '-')
+    subparser = subparsers.add_parser(cmd_name, help=module.description)
+    module.setup_parser(subparser)
+
+def _main(args, unknown_args):
+    # Set up environment based on args.
+    tty.set_verbose(args.verbose)
+    tty.set_debug(args.debug)
+    tty.set_stacktrace(args.stacktrace)
+    rosesh.debug = args.debug
+
+    if rosesh.debug:
+        import rosesh.util.debug as debug
+        debug.register_interrupt_handler()
+
+    # Run any available pre-run hooks
+    rosesh.hooks.pre_run()
+
+    rosesh.rosesh_working_dir = working_dir
+    if args.mock:
+        from rosesh.repository import RepoPath
+        rosesh.repo.swap(RepoPath(rosesh.mock_packages_path))
+
+    # If the user asked for it, don't check ssl certs.
+    if args.insecure:
+        tty.warn("You asked for --insecure. Will NOT check SSL certificates.")
+        rosesh.insecure = True
+
+    # Try to load the particular command asked for and run it
+    command = rosesh.cmd.get_command(args.command.replace('-', '_'))
+
+    # Allow commands to inject an optional argument and get unknown args
+    # if they want to handle them.
+    info = dict(inspect.getmembers(command))
+    varnames = info['__code__'].co_varnames
+    argcount = info['__code__'].co_argcount
+
+    # Actually execute the command
+    try:
+        if argcount == 3 and varnames[2] == 'unknown_args':
+            return_val = command(parser, args, unknown_args)
+        else:
+            if unknown_args:
+                tty.die('unrecognized arguments: %s' % ' '.join(unknown_args))
+            return_val = command(parser, args)
+    except SpackError as e:
+        e.die()
+    except Exception as e:
+        tty.die(str(e))
+    except KeyboardInterrupt:
+        sys.stderr.write('\n')
+        tty.die("Keyboard interrupt.")
+
+    # Allow commands to return values if they want to exit with some other code.
+    if return_val is None:
+        sys.exit(0)
+    elif isinstance(return_val, int):
+        sys.exit(return_val)
+    else:
+        tty.die("Bad return value from command %s: %s"
+                % (args.command, return_val))
+
+
+def main(args):
+    # Just print help and exit if run with no arguments at all
+    if len(args) == 1:
+        parser.print_help()
+        sys.exit(1)
+
+    # actually parse the args.
+    args, unknown = parser.parse_known_args()
+
+    if args.profile or args.sorted_profile:
+        import cProfile
+
+        try:
+            nlines = int(args.lines)
+        except ValueError:
+            if args.lines != 'all':
+                tty.die('Invalid number for --lines: %s' % args.lines)
+            nlines = -1
+
+        # allow comma-separated list of fields
+        sortby = ['time']
+        if args.sorted_profile:
+            sortby = args.sorted_profile.split(',')
+            for stat in sortby:
+                if stat not in stat_names:
+                    tty.die("Invalid sort field: %s" % stat)
+
+        try:
+            # make a profiler and run the code.
+            pr = cProfile.Profile()
+            pr.enable()
+            _main(args, unknown)
+        finally:
+            pr.disable()
+
+            # print out  profile stats.
+            stats = pstats.Stats(pr)
+            stats.sort_stats(*sortby)
+            stats.print_stats(nlines)
+
+    elif args.pdb:
+        import pdb
+        pdb.runctx('_main(args, unknown)', globals(), locals())
+    else:
+        _main(args, unknown)
+
+
+if __name__ == '__main__':
+    main(sys.argv)
