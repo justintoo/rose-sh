@@ -1,0 +1,6 @@
+[submodule "lib/external"]
+	path = lib/external
+	url = https://github.com/llnl/spack.git
+[submodule "lib/external/spack"]
+	path = lib/external/spack
+	url = https://github.com/llnl/spack.git
