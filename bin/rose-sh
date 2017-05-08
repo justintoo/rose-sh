@@ -30,7 +30,7 @@ ROSESH_LIB_PATH = os.path.join(ROSESH_PREFIX, "lib", "rosesh")
 sys.path.insert(0, ROSESH_LIB_PATH)
 
 # Add external libs
-ROSESH_EXTERNAL_LIBS_PATH = os.path.join(ROSESH_PREFIX, "lib", "external")
+ROSESH_EXTERNAL_LIBS_PATH = os.path.join(ROSESH_LIB_PATH, "external")
 sys.path.insert(0, ROSESH_EXTERNAL_LIBS_PATH)
 
 #------------------------------------------------------------------------------

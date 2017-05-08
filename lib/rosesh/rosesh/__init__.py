@@ -15,7 +15,8 @@ import llnl.util.tty as tty
 rosesh_root = ancestor(__file__, 4)
 
 # The rosesh script itself
-rosesh_file = join_path(rosesh_root, "bin", "rosesh")
+bin_path = join_path(rosesh_root, "bin")
+rosesh_file = join_path(bin_path, "rosesh")
 
 # rosesh directory hierarchy
 lib_path       = join_path(rosesh_root, "lib", "rosesh")
@@ -43,6 +44,9 @@ user_config_path = os.path.expanduser('~/.rosesh')
 prefix = rosesh_root
 opt_path       = join_path(prefix, "opt")
 etc_path       = join_path(prefix, "etc")
+
+spack_path = os.path.join(external_path, "spack")
+spack_bin_path = os.path.join(spack_path, "bin")
 
 #-----------------------------------------------------------------------------
 # Logging
