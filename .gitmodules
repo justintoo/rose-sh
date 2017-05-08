@@ -1,6 +1,3 @@
-[submodule "lib/external"]
-	path = lib/external
-	url = https://github.com/llnl/spack.git
-[submodule "lib/external/spack"]
-	path = lib/external/spack
+[submodule "lib/rosesh/external/spack"]
+	path = lib/rosesh/external/spack
 	url = https://github.com/llnl/spack.git
