@@ -173,8 +173,6 @@ def _main(args, unknown_args):
 
 
 def main(args):
-    logger.debug('beginning main program execution')
-
     # Just print help and exit if run with no arguments at all
     if len(args) == 1:
         parser.print_help()

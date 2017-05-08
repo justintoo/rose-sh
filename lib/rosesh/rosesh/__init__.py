@@ -14,8 +14,10 @@ import llnl.util.tty as tty
 # This file lives in $prefix/lib/rosesh/rosesh/__file__
 rosesh_root = ancestor(__file__, 4)
 
-# The rosesh script itself
 bin_path = join_path(rosesh_root, "bin")
+repo_path = join_path(rosesh_root, "repo")
+
+# The rosesh script itself
 rosesh_file = join_path(bin_path, "rosesh")
 
 # rosesh directory hierarchy
