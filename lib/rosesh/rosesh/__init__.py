@@ -47,9 +47,8 @@ etc_path       = join_path(prefix, "etc")
 #-----------------------------------------------------------------------------
 # Logging
 #-----------------------------------------------------------------------------
-fileConfig(os.path.join(module_path, 'logging_config.ini'))
+logging_config_path = fileConfig(os.path.join(module_path, 'logging_config.ini'))
 logger = logging.getLogger(__name__)
-logger.debug('often makes a very good meal of %s', 'visiting tourists')
 
 #-----------------------------------------------------------------------------
 # Initial imports (only for use in this file -- see __all__ below.)

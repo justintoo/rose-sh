@@ -75,14 +75,19 @@ except OSError:
 
 # clean up the scope and start using rose-sh package instead.
 del ROSESH_FILE, ROSESH_PREFIX, ROSESH_LIB_PATH
-import llnl.util.tty as tty
-from llnl.util.tty.color import *
 import rosesh
 from rosesh.error import RoseShError
 import argparse
 import pstats
 
-# Command parsing
+#------------------------------------------------------------------------------
+# Logging
+#------------------------------------------------------------------------------
+logger = logging.getLogger(__name__)
+
+#------------------------------------------------------------------------------
+# Commandline Interface
+#------------------------------------------------------------------------------
 parser = argparse.ArgumentParser(
     formatter_class=argparse.RawTextHelpFormatter,
     description="ROSE-SH: The ROSE Compiler Infrastructure Shell.")
@@ -110,27 +115,22 @@ for cmd in rosesh.cmd.commands:
     module.setup_parser(subparser)
 
 def _main(args, unknown_args):
-    # Set up environment based on args.
-    tty.set_verbose(args.verbose)
-    tty.set_debug(args.debug)
-    tty.set_stacktrace(args.stacktrace)
+    rosesh.verbose = args.verbose
     rosesh.debug = args.debug
 
     if rosesh.debug:
+        logger.info('turning on debug mode')
+        logger.basicConfig(level=logging.DEBUG)
         import rosesh.util.debug as debug
         debug.register_interrupt_handler()
 
-    # Run any available pre-run hooks
-    rosesh.hooks.pre_run()
-
-    rosesh.rosesh_working_dir = working_dir
-    if args.mock:
-        from rosesh.repository import RepoPath
-        rosesh.repo.swap(RepoPath(rosesh.mock_packages_path))
+    if rosesh.verbose:
+        logger.info('turning on verbose mode')
+        logger.basicConfig(level=logging.INFO)
 
     # If the user asked for it, don't check ssl certs.
     if args.insecure:
-        tty.warn("You asked for --insecure. Will NOT check SSL certificates.")
+        logger.warn("You asked for --insecure. Will NOT check SSL certificates.")
         rosesh.insecure = True
 
     # Try to load the particular command asked for and run it
@@ -148,15 +148,18 @@ def _main(args, unknown_args):
             return_val = command(parser, args, unknown_args)
         else:
             if unknown_args:
-                tty.die('unrecognized arguments: %s' % ' '.join(unknown_args))
+                logger.fatal('unrecognized arguments: %s' % ' '.join(unknown_args))
+                sys.exit(1)
             return_val = command(parser, args)
-    except SpackError as e:
+    except RoseShError as e:
         e.die()
     except Exception as e:
-        tty.die(str(e))
+        logger.fatal(str(e))
+        sys.exit(1)
     except KeyboardInterrupt:
         sys.stderr.write('\n')
-        tty.die("Keyboard interrupt.")
+        logger.fatal("Keyboard interrupt.")
+        sys.exit(1)
 
     # Allow commands to return values if they want to exit with some other code.
     if return_val is None:
@@ -164,11 +167,14 @@ def _main(args, unknown_args):
     elif isinstance(return_val, int):
         sys.exit(return_val)
     else:
-        tty.die("Bad return value from command %s: %s"
+        logger.fatal("Bad return value from command %s: %s"
                 % (args.command, return_val))
+        sys.exit(1)
 
 
 def main(args):
+    logger.debug('beginning main program execution')
+
     # Just print help and exit if run with no arguments at all
     if len(args) == 1:
         parser.print_help()
@@ -177,42 +183,7 @@ def main(args):
     # actually parse the args.
     args, unknown = parser.parse_known_args()
 
-    if args.profile or args.sorted_profile:
-        import cProfile
-
-        try:
-            nlines = int(args.lines)
-        except ValueError:
-            if args.lines != 'all':
-                tty.die('Invalid number for --lines: %s' % args.lines)
-            nlines = -1
-
-        # allow comma-separated list of fields
-        sortby = ['time']
-        if args.sorted_profile:
-            sortby = args.sorted_profile.split(',')
-            for stat in sortby:
-                if stat not in stat_names:
-                    tty.die("Invalid sort field: %s" % stat)
-
-        try:
-            # make a profiler and run the code.
-            pr = cProfile.Profile()
-            pr.enable()
-            _main(args, unknown)
-        finally:
-            pr.disable()
-
-            # print out  profile stats.
-            stats = pstats.Stats(pr)
-            stats.sort_stats(*sortby)
-            stats.print_stats(nlines)
-
-    elif args.pdb:
-        import pdb
-        pdb.runctx('_main(args, unknown)', globals(), locals())
-    else:
-        _main(args, unknown)
+    _main(args, unknown)
 
 
 if __name__ == '__main__':
