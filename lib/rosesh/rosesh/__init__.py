@@ -1,5 +1,7 @@
 import multiprocessing
 import os
+import logging
+from logging.config import fileConfig
 import sys
 import tempfile
 import getpass
@@ -42,6 +44,12 @@ prefix = rosesh_root
 opt_path       = join_path(prefix, "opt")
 etc_path       = join_path(prefix, "etc")
 
+#-----------------------------------------------------------------------------
+# Logging
+#-----------------------------------------------------------------------------
+fileConfig(os.path.join(module_path, 'logging_config.ini'))
+logger = logging.getLogger(__name__)
+logger.debug('often makes a very good meal of %s', 'visiting tourists')
 
 #-----------------------------------------------------------------------------
 # Initial imports (only for use in this file -- see __all__ below.)

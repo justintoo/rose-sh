@@ -13,6 +13,8 @@ if sys.version_info[:2] < (2, 6):
 
 import os
 import inspect
+import logging
+from subprocess import call
 
 #------------------------------------------------------------------------------
 # ROSESH Prefix
@@ -30,6 +32,25 @@ sys.path.insert(0, ROSESH_LIB_PATH)
 # Add external libs
 ROSESH_EXTERNAL_LIBS_PATH = os.path.join(ROSESH_PREFIX, "lib", "external")
 sys.path.insert(0, ROSESH_EXTERNAL_LIBS_PATH)
+
+#------------------------------------------------------------------------------
+# ROSESH/lib/external/spack submodule
+#------------------------------------------------------------------------------
+SPACK_SUBMODULE_PATH = os.path.join(ROSESH_EXTERNAL_LIBS_PATH, "spack")
+
+clone_spack = False
+
+if not os.path.exists(SPACK_SUBMODULE_PATH):
+    clone_spack = True
+
+for dirpath, dirnames, files in os.walk(SPACK_SUBMODULE_PATH):
+    if files:
+        clone_spack = False
+    if not files:
+        clone_spack = True
+
+if clone_spack:
+    call(["git", "submodule", "update", "--init"])
 
 #------------------------------------------------------------------------------
 # ROSESH/lib/external/spack/lib
@@ -72,16 +93,8 @@ parser.add_argument('-D', '--pdb', action='store_true',
                     help="run rosesh under the pdb debugger")
 parser.add_argument('-k', '--insecure', action='store_true',
                     help="do not check ssl certificates when downloading")
-parser.add_argument('-m', '--mock', action='store_true',
-                    help="use mock packages instead of real ones")
-parser.add_argument('-p', '--profile', action='store_true',
-                    help="profile execution using cProfile")
-parser.add_argument('--lines', default=20, action='store',
-                    help="lines of profile output: default 20; 'all' for all")
 parser.add_argument('-v', '--verbose', action='store_true',
                     help="print additional output during builds")
-parser.add_argument('-s', '--stacktrace', action='store_true',
-                    help="add stacktrace info to all printed statements")
 parser.add_argument('-V', '--version', action='version',
                     version="%s" % rosesh.rosesh_version)
 
