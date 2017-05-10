@@ -23,11 +23,10 @@ def setup_parser(subparser):
 
 def bootstrap_repo():
     # Add Spack to the PATH so we can execute it
-    #
     current_env = os.environ.copy()
     current_env["PATH"] = rosesh.spack_bin_path + ":" + current_env["PATH"]
 
-    # Add our custom ROSESH/repo to Spack's site-specific repo list
+    # Add our custom ROSESH/repo to Spack's site-specific repo list;
     # Don't re-add if already added, else Spack will fail with an error
     roots = spack.config.get_config('repos', 'site')
 
@@ -49,6 +48,7 @@ def bootstrap_repo():
 def install(parser, args, unknown_args):
     bootstrap_repo()
 
+    # Add Spack to the PATH so we can execute it
     current_env = os.environ.copy()
     current_env["PATH"] = rosesh.spack_bin_path + ":" + current_env["PATH"]
 
@@ -58,3 +58,4 @@ def install(parser, args, unknown_args):
     #
     install_script = os.path.join(rosesh.bin_path, "install-rose.sh")
     subprocess.call([install_script, args.rose_version] + unknown_args, env=current_env)
+
