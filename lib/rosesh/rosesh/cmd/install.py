@@ -21,32 +21,47 @@ def setup_parser(subparser):
         help='compiler to compile ROSE with')
 
 
-def bootstrap_repo():
+def add_repo(namespace, root):
     # Add Spack to the PATH so we can execute it
     current_env = os.environ.copy()
     current_env["PATH"] = rosesh.spack_bin_path + ":" + current_env["PATH"]
 
-    # Add our custom ROSESH/repo to Spack's site-specific repo list;
-    # Don't re-add if already added, else Spack will fail with an error
+    # Don't re-add repo if already added, else Spack will fail with an error
     roots = spack.config.get_config('repos', 'site')
 
     repo_added = False
     for r in roots:
         try:
             repo = spack.repository.Repo(r)
-            if repo.namespace =='rosesh' and repo.root == rosesh.repo_path:
+            if repo.namespace == namespace and repo.root == root:
                 repo_added = True
         except spack.repository.RepoError:
             continue
 
     if repo_added:
-        logger.debug('already added our custom rosesh spack repository: %s' % (rosesh.repo_path))
+        logger.debug('already added our custom spack repository: %s' % (root))
     else:
-        cmd = "spack repo add --scope=site %s" % (rosesh.repo_path)
+        cmd = "spack repo add --scope=site %s" % (root)
         subprocess.call(cmd.split(), env=current_env)
 
+def create_temp_repo():
+    # version('__ROSE_VERSION__', commit='__ROSE_COMMIT__', git='__ROSE_REPO__')
+    replacements = {
+        '__ROSE_VERSION__': rose_version,
+        '__ROSE_COMMIT__': rose_commit,
+        '__ROSE_REPO__': rose_repo
+    }
+
+    with open('path/to/input/file') as infile, open('path/to/output/file', 'w') as outfile:
+        for line in infile:
+            for src, target in replacements.iteritems():
+                line = line.replace(src, target)
+            outfile.write(line)
+
 def install(parser, args, unknown_args):
-    bootstrap_repo()
+    repo_namespace = 'rosesh'
+    repo_path = rosesh.repo_path
+    add_repo(repo_namespace, repo_path)
 
     # Add Spack to the PATH so we can execute it
     current_env = os.environ.copy()
