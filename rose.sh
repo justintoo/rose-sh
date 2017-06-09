@@ -5,14 +5,16 @@ export ROSE_SH_HOME="$(cd "$(dirname "$0")" && pwd)"
 export PATH="${ROSE_SH_HOME}/opt:${ROSE_SH_HOME}/opt/bin:${PATH}"
 export PYTHONPATH="${ROSE_SH_HOME}/opt/filelock-0.2.0/installation/lib/python2.7/site-packages:${PYTHONPATH}"
 
-source /nfs/casc/overture/ROSE/opt/rhel6/x86_64/sqlite/308002/gcc/4.4.5/setup.sh || true
+if test -f /nfs/casc/overture/ROSE/opt/rhel6/x86_64/sqlite/308002/gcc/4.4.5/setup.sh; then
+  source /nfs/casc/overture/ROSE/opt/rhel6/x86_64/sqlite/308002/gcc/4.4.5/setup.sh
+fi
 
 #-------------------------------------------------------------------------------
 # Set defaults
 #-------------------------------------------------------------------------------
-: ${ROSE_CC:="$(which identityTranslator)"}
-: ${ROSE_CXX:="$(which identityTranslator)"}
-: ${ROSE_GFORTRAN:="$(which identityTranslator)"}
+: ${ROSE_CC:="identityTranslator"}
+: ${ROSE_CXX:="identityTranslator"}
+: ${ROSE_GFORTRAN:="identityTranslator"}
 : ${CC:="gcc"}
 : ${CXX:="g++"}
 : ${GFORTRAN:="gfortran"}
@@ -45,6 +47,7 @@ export APPLICATIONS_LIST="$(ls ${APPLICATIONS_DIR}/ | xargs -I{} basename {} | s
 : ${ROSE_SH_CLOBBER_MODE:=}
 #-------------------------------------------------------------------------------
 : ${REPOSITORY_MIRROR_URLS:=
+  https://github.com/rose-sh
   https://bitbucket.org/rose-compiler
   https://bitbucket.org/rose-sh
   rose-dev@rosecompiler1.llnl.gov:rose/c
@@ -367,9 +370,9 @@ for arg in $*; do
     --keep-going)
         export ROSE_CC="$(which keep-going.py) --tool=${ROSE_CC}"
         export ROSE_CXX="$(which keep-going.py) --tool=${ROSE_CXX}"
-        export ROSE_GFORTRAN="$(which keep-going.py --tool=${ROSE_GFORTRAN})"
+        export ROSE_GFORTRAN="$(which keep-going.py) --tool=${ROSE_GFORTRAN}"
+        export ROSESH_KEEP_GOING=true
         shift;;
-    #--keep-going)   export ROSE_CC="$(which KeepGoingTranslator.py)"; shift;;
     --disable-configure-step)   export ROSE_SH_ENABLE_CONFIGURE="false"; shift;;
     --clobber)      export ROSE_SH_CLOBBER_MODE="-rose:unparser:clobber_input_file"; shift;;
     --shell)
@@ -433,12 +436,16 @@ fi
 #-------------------------------------------------------------------------------
 # Sanity Checks
 #-------------------------------------------------------------------------------
-if test -z "$(which "${ROSE_CC}")"; then
-  fail "\$ROSE_CC does not exist"
-fi
-
-if test -z "$(which "${ROSE_CXX}")"; then
-  fail "\$ROSE_CXX does not exist"
+if test "x${ROSESH_KEEP_GOING}" = "xtrue"; then
+  info "Using the keep-going tool"
+else
+  if test -z "$(which "${ROSE_CC}")"; then
+    fail "\$ROSE_CC does not exist"
+  fi
+  
+  if test -z "$(which "${ROSE_CXX}")"; then
+    fail "\$ROSE_CXX does not exist"
+  fi
 fi
 
 #-------------------------------------------------------------------------------

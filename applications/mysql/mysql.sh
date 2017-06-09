@@ -101,7 +101,7 @@ compile_mysql()
           # guess it may not be necessary since all dependencies are already
           # available... I guess for now we'll play it safe
           # Must run with verbose mode to get *all* compile lines
-          make -j$(cat /proc/cpuinfo | grep processor | wc -l) VERBOSE=1 2>&1 | tee output-mysql-make-gcc.txt || exit 1
+          make -j${parallelism} VERBOSE=1 2>&1 | tee output-mysql-make-gcc.txt || exit 1
 #          make -j32 VERBOSE=1 2>&1 | tee output-mysql-make-gcc.txt || exit 1
           if [ "${PIPESTATUS[0]}" -ne 0 ]; then
             echo "[FATAL] GCC compilation failed. Terminating..."
@@ -268,7 +268,10 @@ $(echo -e "\t") git clone https://github.com/AlDanial/cloc.git
 $(echo -e "\t") cloc/cloc ${source_files}
 MAKEFILE
           
-          make V=${VERBOSE} -j${parallelism} -f "${ROSE_MAKEFILE}" || fail "An error occurred during application compilation"
+          ROSE_CC="${ROSE_CC}"       \
+          ROSE_CXX="${ROSE_CXX}"     \
+	  /usr/bin/time --format=%E  \
+            make V=${VERBOSE} -j${parallelism} -f "${ROSE_MAKEFILE}" || fail "An error occurred during application compilation"
 
 # Extract results from Sqlite database and save to files:
 #
@@ -279,7 +282,7 @@ sqlite3 "${application_abs_srcdir}/rose-results.db" > "${application_abs_srcdir}
 SELECT filename FROM results WHERE passed=1;
 SQL
 
-sqlite3 "${application_abs_srcdir}/rose-results.db" > "${application_abs_srcdir}/rose-failures" <<SQL
+sqlite3 "${application_abs_srcdir}/rose-results.db" > "${application_abs_srcdir}/rose-failures.txt" <<SQL
 SELECT filename FROM results WHERE passed=0;
 SQL
 

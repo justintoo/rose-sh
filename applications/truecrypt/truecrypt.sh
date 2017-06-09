@@ -78,6 +78,8 @@ compile_truecrypt()
     CXX="${ROSE_CXX}" \
     PKCS11_INC="$(pwd)/PKCS-Headers" \
       /usr/bin/time --format=%E make --keep-going -j${parallelism} VERBOSE=1 WXSTATIC=1 || fail "An error occurred while building TrueCrypt"
+      #/usr/bin/time --format=%E make --keep-going -j8 VERBOSE=1 WXSTATIC=1 NOSTRIP=1 || fail "An error occurred while building TrueCrypt"
+      #/usr/bin/time --format=%E make --keep-going -j${parallelism} VERBOSE=1 WXSTATIC=1 || fail "An error occurred while building TrueCrypt"
   #-----------------------------------------------------------------------------
   set +x
   #-----------------------------------------------------------------------------
