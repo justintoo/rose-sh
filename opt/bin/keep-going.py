@@ -7,6 +7,7 @@ import sys
 import difflib
 import filelock
 import filecmp
+import re
 import sqlite3
 
 #------------------------------------------------------------------------------
@@ -129,8 +130,18 @@ for arg in unknown:
 # Escape single quotes to retain them in commandline to tool
 args = ' '.join("'%s'" % arg.replace("'", "\\'") for arg in sys.argv[1:])
 
+# [ROSESH-31] ROSE/Compass does not generate a truecrypt executable with
+# TrueCrypt's link commandline because ROSE tries to process each of the .o files,
+# so let's just link with the system compiler:
+if "'-o' 'truecrypt'" in args:
+  print >> sys.stdout, 'Linking truecrypt with ', cxx
+  tool = cxx
+
 # [ROSE-788] Could not open specified input file: TC_ARCH_X64
+# '----TrueCrypt:
 args = args.replace("'-D' 'TC_ARCH_X64'", "'-DTC_ARCH_X64'")
+# '----MySQL:
+args = args.replace("'-D' 'CLIENT_PROTOCOL_TRACING'", "'-DCLIENT_PROTOCOL_TRACING'")
 
 #------------------------------------------------------------------------------
 # Main Execution
@@ -143,6 +154,9 @@ try:
   # Try to run the original commandline with the default compiler
   if retcode == 1:
     print >> sys.stdout, '[ERROR] Failed requested tool commandline, trying to keep going with the default compiler next...'
+
+    # [ROSESH-13] MySQL replay; must remove rose option before processing with system compiler
+    args = re.sub(r"'-rose:output' '.*'", "", args)
 
     cmd = '%s %s %s' % (default_compiler, args, flags)
     print >> sys.stdout, '+', cmd
